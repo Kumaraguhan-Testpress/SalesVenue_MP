@@ -67,8 +67,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Ad)
 class AdAdmin(admin.ModelAdmin):
-    list_display = ['title', 'user', 'category', 'ad_type', 'price', 'is_active', 'created_at']
-    list_filter = ['ad_type', 'category', 'is_active', 'created_at']
+    list_display = ['title', 'user', 'category', 'price', 'is_active', 'created_at']
+    list_filter = ['category', 'is_active', 'created_at']
     search_fields = ['title', 'description', 'location']
     date_hierarchy = 'created_at' # Provides a drill-down navigation by date
     raw_id_fields = ['user', 'category'] # Use a searchable input for foreign keys
@@ -80,3 +80,11 @@ class MessageAdmin(admin.ModelAdmin):
     search_fields = ['content']
     date_hierarchy = 'sent_at'
     raw_id_fields = ['sender', 'recipient', 'ad']
+
+@admin.register(AdImage)
+class AdImageAdmin(admin.ModelAdmin):
+    list_display = ('ad', 'image', 'order')
+    list_filter = ('ad',)
+    search_fields = ('ad__title',) # Search by the ad's title
+    raw_id_fields = ('ad',) # Use a raw ID field for the ForeignKey to Ad for better performance
+    ordering = ('ad', 'order')
