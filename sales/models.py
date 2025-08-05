@@ -2,7 +2,6 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class CustomUser(AbstractUser):
-
     """
     A custom user model that extends Django's built-in AbstractUser.
 
@@ -17,6 +16,10 @@ class CustomUser(AbstractUser):
         return self.username
     
 class Category(models.Model):
+    """
+    A model representing a Categories of Each advertisement posted by a user.
+    """
+
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True, null=True)
 
@@ -24,10 +27,10 @@ class Category(models.Model):
         return self.name
     
 class AdType(models.TextChoices):
-
     """
     A class-based enumeration for the types of advertisements available.
     """
+
     JOB = 'job', 'Job'
     PET = 'pet', 'Pet Corner'
     SALE = 'sale', 'For Sale'
@@ -35,7 +38,6 @@ class AdType(models.TextChoices):
     EVENT = 'event', 'Event'
 
 class Ad(models.Model):
-    
     """
     A model representing a single advertisement posted by a user.
     """
@@ -63,10 +65,10 @@ class Ad(models.Model):
     
 
 class Message(models.Model):
-
     """
     Represents a private message sent between two users regarding a specific ad.
     """
+
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
     recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_messages')
     ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name='messages')
@@ -77,3 +79,4 @@ class Message(models.Model):
     def __str__(self):
         """Returns a string representation of the message."""
         return f"Message from {self.sender.username} to {self.recipient.username}"
+        
