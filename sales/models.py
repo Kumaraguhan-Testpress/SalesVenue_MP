@@ -88,5 +88,4 @@ class Message(models.Model):
     read = models.BooleanField(default=False, help_text="Indicates whether the recipient has read the message.") 
 
     def __str__(self):
-        """Returns a string representation of the message."""
         return f"Message from {self.sender.username} to {self.recipient.username}"
