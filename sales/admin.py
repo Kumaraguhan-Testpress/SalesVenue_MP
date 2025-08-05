@@ -36,14 +36,6 @@ class AdAdmin(admin.ModelAdmin):
     raw_id_fields = ['user', 'category'] # Use a searchable input for foreign keys
     inlines = [AdImageInline]
 
-@admin.register(Message)
-class MessageAdmin(admin.ModelAdmin):
-    list_display = ['ad', 'sender', 'recipient', 'sent_at', 'read']
-    list_filter = ['read', 'sent_at']
-    search_fields = ['content']
-    date_hierarchy = 'sent_at'
-    raw_id_fields = ['sender', 'recipient', 'ad']
-
 @admin.register(AdImage)
 class AdImageAdmin(admin.ModelAdmin):
     list_display = ('ad', 'image', 'order')
@@ -51,3 +43,11 @@ class AdImageAdmin(admin.ModelAdmin):
     search_fields = ('ad__title',) # Search by the ad's title
     raw_id_fields = ('ad',) # Use a raw ID field for the ForeignKey to Ad for better performance
     ordering = ('ad', 'order')
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ['ad', 'sender', 'recipient', 'sent_at', 'read']
+    list_filter = ['read', 'sent_at']
+    search_fields = ['content']
+    date_hierarchy = 'sent_at'
+    raw_id_fields = ['sender', 'recipient', 'ad']
