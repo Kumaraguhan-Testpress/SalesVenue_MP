@@ -64,6 +64,13 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'description']
     search_fields = ['name']
 
+# Create an inline model for AdImage
+class AdImageInline(OrderedTabularInline):
+    model = AdImage
+    # The 'ad' field will be automatically populated, so it's a readonly field
+    # fields = ('image', 'order')  # Remove 'ad' as it's the FK to the parent
+    extra = 1  # Number of empty forms to display
+    ordering = ('order',) # The inline will also respect this ordering
 
 @admin.register(Ad)
 class AdAdmin(admin.ModelAdmin):
@@ -72,6 +79,7 @@ class AdAdmin(admin.ModelAdmin):
     search_fields = ['title', 'description', 'location']
     date_hierarchy = 'created_at' # Provides a drill-down navigation by date
     raw_id_fields = ['user', 'category'] # Use a searchable input for foreign keys
+    inlines = [AdImageInline]
 
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
