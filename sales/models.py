@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from ordered_model.models import OrderedModel
 
 class CustomUser(AbstractUser):
     """
@@ -51,9 +52,10 @@ class Ad(models.Model):
     def is_visible_to_user(self, user):
         return self.contact_info_visible or user == self.user
     
-class AdImage(models.Model):
+class AdImage(OrderedModel):
     """
     A model to store multiple images for a single Ad.
+    This uses OrderedModel to automatically manage the ordering of images.
     """
 
     ad = models.ForeignKey(
@@ -66,10 +68,8 @@ class AdImage(models.Model):
         help_text="The image file for the ad."
     )
     
-    order = models.PositiveIntegerField(default=0, blank=False, null=False)
-
     class Meta:
-        ordering = ['order']
+        ordering = ['ad', 'order']
 
     def __str__(self):
         return f"Image for Ad: {self.ad.title}"
