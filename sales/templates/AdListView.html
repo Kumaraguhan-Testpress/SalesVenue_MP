@@ -19,8 +19,8 @@
                     <p class="ad-posted-by">Posted by: {{ ad.user.username }} on {{ ad.created_at|date:"F d, Y" }}</p>
                 </div>
                 
-                {% if ad.image %}
-                    <img src="{{ ad.image.url }}" alt="{{ ad.title }}" class="ad-image">
+                {% if ad.images.first %}
+                    <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" class="ad-image">
                 {% endif %}
             </div>
         </div>
