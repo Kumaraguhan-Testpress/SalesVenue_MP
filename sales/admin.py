@@ -1,12 +1,11 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, Category, Ad, Message, AdImage
-from ordered_model.admin import OrderedModelAdmin, OrderedTabularInline
+from ordered_model.admin import OrderedTabularInline
 
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    model = CustomUser
     list_display = ['username', 'email', 'first_name', 'last_name', 'is_staff', 'phone_number']
     fieldsets = UserAdmin.fieldsets + (
         ('Contact Information', {'fields': ('phone_number', 'contact_info_visibility')}),
@@ -22,8 +21,6 @@ class CategoryAdmin(admin.ModelAdmin):
 # Create an inline model for AdImage
 class AdImageInline(OrderedTabularInline):
     model = AdImage
-    # The 'ad' field will be automatically populated, so it's a readonly field
-    # fields = ('image', 'order')  # Remove 'ad' as it's the FK to the parent
     extra = 1  # Number of empty forms to display
     ordering = ('order',) # The inline will also respect this ordering
 

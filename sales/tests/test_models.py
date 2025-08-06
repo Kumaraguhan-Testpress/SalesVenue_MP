@@ -3,7 +3,9 @@ from django.contrib.auth import get_user_model
 from ..models import CustomUser, Category, Ad, AdImage, Message
 from ordered_model.models import OrderedModel
 
-# Get the custom user model to use in tests
+"""
+Get the custom user model to use in tests
+"""
 User = get_user_model()
 
 class CustomUserModelTest(TestCase):
@@ -42,7 +44,9 @@ class AdModelTest(TestCase):
             user=self.user,
             title='Test Ad Title',
             description='Test ad description.',
-            category=self.category
+            category=self.category,
+            location='Test Location',
+            contact_info='test@example.com'
         )
         self.assertEqual(ad.title, 'Test Ad Title')
         self.assertEqual(ad.user, self.user)
@@ -53,7 +57,9 @@ class AdModelTest(TestCase):
             user=self.user,
             title='Ad for Testing',
             description='Description',
-            category=self.category
+            category=self.category,
+            location='Test Location',
+            contact_info='test@example.com'
         )
         self.assertEqual(str(ad), 'Ad for Testing')
 
@@ -65,7 +71,9 @@ class AdImageModelTest(TestCase):
             user=self.user,
             title='Test Ad with Images',
             description='Testing images.',
-            category=self.category
+            category=self.category,
+            location='Test Location',
+            contact_info='test@example.com'
         )
 
     def test_ad_image_creation(self):
@@ -90,7 +98,9 @@ class MessageModelTest(TestCase):
             user=self.recipient,
             title='Ad for Message',
             description='Message test ad.',
-            category=self.category
+            category=self.category,
+            location='Test Location',
+            contact_info='test@example.com'
         )
 
     def test_message_creation(self):
