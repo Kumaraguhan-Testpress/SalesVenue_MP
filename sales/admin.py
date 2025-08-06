@@ -18,7 +18,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'description']
     search_fields = ['name']
 
-# Create an inline model for AdImage
+
 class AdImageInline(OrderedTabularInline):
     model = AdImage
     extra = 1
