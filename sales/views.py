@@ -10,5 +10,6 @@ class AdListView(ListView):
     paginate_by = 10
     
     def get_queryset(self):
-        # We only want to show active ads
-        return Ad.objects.filter(is_active=True).order_by('-created_at')
+        return Ad.objects.filter(is_active=True).select_related('user', 'category') \
+                                                .prefetch_related('images') \
+                                                .order_by('-created_at')
