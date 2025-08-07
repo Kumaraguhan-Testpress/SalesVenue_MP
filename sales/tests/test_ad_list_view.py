@@ -61,7 +61,7 @@ class AdListViewTests(TestCase):
         """ Test that the ad list view uses the correct template. """
 
         response = self.client.get(reverse('ad_list'))
-        self.assertTemplateUsed(response, 'AdListView.html')
+        self.assertTemplateUsed(response, 'ad_list_view.html')
 
     def test_only_active_ads_displayed(self):
         """ Test that the view context only contains active ads. """

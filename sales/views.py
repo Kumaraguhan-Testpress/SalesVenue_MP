@@ -4,7 +4,7 @@ from .models import Ad
 
 class AdListView(ListView):
     model = Ad
-    template_name = 'AdListView.html'
+    template_name = 'ad_list_view.html'
     context_object_name = 'ads'
     
     paginate_by = 10
