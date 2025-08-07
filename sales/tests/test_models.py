@@ -1,7 +1,9 @@
+import os
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from ..models import CustomUser, Category, Ad, AdImage, Message
 from ordered_model.models import OrderedModel
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 """
 Get the custom user model to use in tests
@@ -79,10 +81,18 @@ class AdImageModelTest(TestCase):
     def test_ad_image_creation(self):
         """Test that an image can be created and linked to an ad."""
 
-        # Note: We're not uploading a real file here for simplicity
-        image = AdImage.objects.create(ad=self.ad, image='dummy_image.jpg')
+        image = AdImage.objects.create(
+                                    ad=self.ad, 
+                                    image=SimpleUploadedFile(
+                                        name='dummy_image.jpg', 
+                                        content=b'\x47\x49\x46\x38\x39\x61', 
+                                        content_type='image/jpeg'))
         self.assertEqual(image.ad, self.ad)
-        self.assertEqual(image.image, 'dummy_image.jpg')
+        filename = os.path.basename(image.image.name)
+        self.assertTrue(
+            filename.startswith('dummy_image'),
+            f"Expected filename to start with 'dummy_image', got: {filename}"
+        )
         self.assertIsInstance(image, OrderedModel)
 
     def test_str_representation(self):
