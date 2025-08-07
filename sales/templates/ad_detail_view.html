@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="ad-title-row">
+        <h1 class="ad-title">{{ ad.title }}</h1>
+
+        {% if show_user_contact_info and user_phone_number %}
+            <div class="user-contact-box">
+                <div class="user-contact-inline">
+                    <div class="user-contact-label">
+                        <i class="bi bi-telephone"></i> Seller Contact
+                    </div>
+                    <div class="user-contact-number">
+                        {{ user_phone_number }}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="ad-detail-container">
+        <p><strong>Category:</strong> {{ ad.category.name }}</p>
+        <p><strong>Description:</strong> {{ ad.description }}</p>
+
+        <p><strong>Price:</strong>
+            {% if ad.price %}
+                ${{ ad.price }}
+            {% else %}
+                N/A
+            {% endif %}
+        </p>
+
+        <p><strong>Location:</strong> {{ ad.location }}</p>
+        <p><strong>Posted by:</strong> {{ ad.user.username }} on {{ ad.created_at|date:"F d, Y" }}</p>
+
+        {% if ad.event_date %}
+            <p><strong>Event Date:</strong> {{ ad.event_date|date:"F d, Y" }}</p>
+        {% endif %}
+
+        {% if show_contact_info %}
+            <p><strong>Contact Info:</strong> {{ ad.contact_info }}</p>
+        {% else %}
+            <p><em>Ad contact information is hidden.</em></p>
+        {% endif %}
+
+        {% if images %}
+            <div class="ad-image-gallery">
+                {% for image in images %}
+                    <img src="{{ image.image.url }}" alt="{{ ad.title }}" class="ad-image">
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
