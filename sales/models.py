@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from ordered_model.models import OrderedModel
+from django.urls import reverse
 
 class CustomUser(AbstractUser):
     """
@@ -51,6 +52,9 @@ class Ad(models.Model):
 
     def is_visible_to_user(self, user):
         return self.contact_info_visible or user == self.user
+
+    def get_absolute_url(self):
+        return reverse('ad_detail', args=[str(self.pk)])
     
 class AdImage(OrderedModel):
     """
