@@ -1,0 +1,11 @@
+{% extends "accounts_base.html" %}
+{% block title %}Logged Out{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-center align-items-center min-vh-100">
+    <div class="logout-box">
+        <h2 class="text-success">You have been logged out.</h2>
+        <p>We hope to see you again soon!</p>
+        <a href="{% url 'login' %}" class="btn btn-outline-primary mt-3">Login Again</a>
+    </div>
+</div>
+{% endblock %}

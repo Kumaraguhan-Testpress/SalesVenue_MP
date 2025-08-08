@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts',
     'sales',
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
@@ -116,3 +117,11 @@ AUTH_USER_MODEL = 'sales.CustomUser'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'ad_list'
+LOGOUT_REDIRECT_URL = 'logout'
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
