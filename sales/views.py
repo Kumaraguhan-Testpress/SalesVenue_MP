@@ -1,7 +1,8 @@
 from django.shortcuts import render, get_object_or_404
-from django.views.generic import ListView, DetailView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from .models import Ad
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.urls import reverse_lazy
 
 class AdListView(ListView):
     model = Ad
@@ -22,7 +23,7 @@ class AdListView(ListView):
                                                 .prefetch_related('images') \
                                                 .order_by('-created_at')
 
-class AdDetailView(LoginRequiredMixin ,DetailView):
+class AdDetailView(LoginRequiredMixin, DetailView):
     model = Ad
     template_name = 'ad_detail_view.html'
     context_object_name = 'ad'
@@ -42,3 +43,32 @@ class AdDetailView(LoginRequiredMixin ,DetailView):
         context['images'] = ad.images.all()
 
         return context
+
+class AdCreateView(LoginRequiredMixin, CreateView):
+    model = Ad
+    template_name = 'ad_form.html'
+    fields = ['title', 'description', 'price', 'location', 'contact_info', 'contact_info_visible', 'category', 'event_date']
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user  # Assign logged-in user as ad owner
+        return super().form_valid(form)
+
+
+class AdUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Ad
+    template_name = 'ad_form.html'
+    fields = ['title', 'description', 'price', 'location', 'contact_info', 'contact_info_visible', 'category', 'event_date']
+
+    def test_func(self):
+        ad = self.get_object()
+        return self.request.user == ad.user  # Only owner can update
+
+
+class AdDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Ad
+    template_name = 'ad_confirm_delete.html'
+    success_url = reverse_lazy('ad_list')
+
+    def test_func(self):
+        ad = self.get_object()
+        return self.request.user == ad.user
