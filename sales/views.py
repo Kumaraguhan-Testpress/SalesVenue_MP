@@ -2,7 +2,6 @@ from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, DetailView
 from .models import Ad
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import LoginRequiredMixin
 
 class AdListView(ListView):
     model = Ad
@@ -23,7 +22,7 @@ class AdListView(ListView):
                                                 .prefetch_related('images') \
                                                 .order_by('-created_at')
 
-class AdDetailView(LoginRequiredMixin, DetailView):
+class AdDetailView(LoginRequiredMixin ,DetailView):
     model = Ad
     template_name = 'ad_detail_view.html'
     context_object_name = 'ad'
