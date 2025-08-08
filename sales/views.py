@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, DetailView
 from .models import Ad
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 class AdListView(ListView):
     model = Ad
@@ -8,13 +9,20 @@ class AdListView(ListView):
     context_object_name = 'ads'
     
     paginate_by = 10
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            # If not authenticated, render a different template with a welcome message
+            return render(request, 'welcome.html')
+
+        return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
         return Ad.objects.filter(is_active=True).select_related('user', 'category') \
                                                 .prefetch_related('images') \
                                                 .order_by('-created_at')
 
-class AdDetailView(DetailView):
+class AdDetailView(LoginRequiredMixin ,DetailView):
     model = Ad
     template_name = 'ad_detail_view.html'
     context_object_name = 'ad'

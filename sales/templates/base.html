@@ -17,9 +17,16 @@
                 <div class="d-flex align-items-center">
                     {% if user.is_authenticated %}
                         <span class="welcome-text">Welcome, {{ user.username }}</span>
-                        <a href="" class="btn btn-outline-info ms-3">Logout</a>
+                        <div>
+                            <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-light ms-3">
+                                    Logout
+                                </button>
+                            </form>
+                        </div>
                     {% else %}
-                        <a href="" class="btn btn-login ms-3">Login</a>
+                        <a href="{% url 'login' %}" class="btn btn-login ms-3">Login</a>
                     {% endif %}
                 </div>
             </div>

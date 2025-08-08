@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="welcome-banner">
+    <h1>Welcome to SalesVenue</h1>
+    <p>
+        <strong>SalesVenue</strong> is your go-to marketplace for discovering, buying, and selling a wide range of products and services.
+        Whether you're an individual looking for great deals, a small business trying to reach more customers, or a service provider
+        offering local expertise — <strong>SalesVenue is made for you!</strong>
+    </p>
+    <p>
+        Create an account today to unlock full access, post your own ads, and connect with buyers and sellers in your area.
+    </p>
+    <a href="{% url 'signup' %}" class="btn btn-primary">Get Started - Sign Up</a>
+</div>
+{% endblock %}

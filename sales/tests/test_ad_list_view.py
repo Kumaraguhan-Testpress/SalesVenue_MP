@@ -61,6 +61,7 @@ class AdListViewTests(TestCase):
         self.assertEqual(len(ads), 2)
 
     def test_empty_ad_list(self):
+        self.client.force_login(self.user)
         Ad.objects.all().delete()
         response = self.client.get(reverse('ad_list'))
         self.assertContains(response, 'No ads are currently available.')

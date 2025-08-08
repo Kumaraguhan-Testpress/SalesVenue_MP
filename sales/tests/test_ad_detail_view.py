@@ -10,17 +10,14 @@ class AdDetailViewTest(TestCase):
         User = get_user_model()
         self.client = Client()
 
-        # Create user and ad owner
         self.user = User.objects.create_user(username='testuser', password='password')
         self.ad_owner = User.objects.create_user(username='owner', password='password', first_name='OwnerName')
         self.ad_owner.phone_number = '1234567890'
         self.ad_owner.contact_info_visibility = True
         self.ad_owner.save()
 
-        # Create category
         self.category = Category.objects.create(name='Electronics')
 
-        # Create an active ad
         self.ad = Ad.objects.create(
             title='Test Ad',
             description='Test Description',
@@ -38,14 +35,16 @@ class AdDetailViewTest(TestCase):
         self.detail_url = reverse('ad_detail', kwargs={'pk': self.ad.pk})
 
     def test_ad_detail_view_renders_active_ad(self):
-        response = self.client.get(self.detail_url)
+        self.client.force_login(self.ad_owner)
+        response = self.client.get(self.ad.get_absolute_url())
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.ad.title)
 
     def test_only_active_ads_are_accessible(self):
         self.ad.is_active = False
         self.ad.save()
-        response = self.client.get(self.detail_url)
+        self.client.force_login(self.ad_owner)
+        response = self.client.get(self.ad.get_absolute_url())
         self.assertEqual(response.status_code, 404)
 
     def test_context_includes_contact_info_visibility(self):
@@ -69,21 +68,25 @@ class AdDetailViewTest(TestCase):
         self.assertNotContains(response, '1234567890')
 
     def test_images_are_included_in_context(self):
-        response = self.client.get(self.detail_url)
+        self.client.force_login(self.ad_owner)
+        response = self.client.get(self.ad.get_absolute_url())
         self.assertIn('images', response.context)
         self.assertEqual(list(response.context['images']), list(self.ad.images.all()))
         self.assertContains(response, self.image.image.url)
 
     def test_template_used(self):
-        response = self.client.get(self.detail_url)
+        self.client.force_login(self.ad_owner)
+        response = self.client.get(self.ad.get_absolute_url())
         self.assertTemplateUsed(response, 'ad_detail_view.html')
 
     def test_event_date_displayed(self):
-        response = self.client.get(self.detail_url)
+        self.client.force_login(self.ad_owner)
+        response = self.client.get(self.ad.get_absolute_url())
         self.assertContains(response, self.ad.event_date.strftime('%B %d, %Y'))
 
     def test_ad_owner_username_displayed(self):
-        response = self.client.get(self.detail_url)
+        self.client.force_login(self.ad_owner)
+        response = self.client.get(self.ad.get_absolute_url())
         self.assertContains(response, self.ad_owner.username)
 
     def test_contact_info_hidden_if_not_visible_to_user(self):
