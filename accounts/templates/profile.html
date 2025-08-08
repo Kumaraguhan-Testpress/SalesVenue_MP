@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 {% load widget_tweaks %}
 
@@ -12,15 +11,26 @@
 
         {% for field in form %}
             <div class="col-12 mb-3">
-                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                {% if field.field.widget.input_type == 'checkbox' %}
+
+                {% if field.name == 'contact_info_visibility' %}
                     <div class="form-check">
                         {% render_field field class="form-check-input" %}
-                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        <label class="form-check-label" for="{{ field.id_for_label }}">
+                            Show Contact Info Publicly
+                        </label>
                     </div>
                 {% else %}
+                    <label for="{{ field.id_for_label }}" class="form-label">
+                        {% if field.name == 'username' %}Username
+                        {% elif field.name == 'email' %}Email Address
+                        {% elif field.name == 'phone_number' %}Phone Number
+                        {% elif field.name == 'profile_picture' %}Profile Picture
+                        {% else %}{{ field.label }}
+                        {% endif %}
+                    </label>
                     {% render_field field class="form-control" %}
                 {% endif %}
+
                 {% if field.errors %}
                     <div class="invalid-feedback d-block">
                         {% for error in field.errors %}
@@ -28,6 +38,7 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+
             </div>
         {% endfor %}
 

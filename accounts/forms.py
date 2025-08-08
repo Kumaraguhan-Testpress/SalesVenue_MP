@@ -14,10 +14,10 @@ class CustomUserUpdateForm(forms.ModelForm):
     class Meta:
         model = CustomUser
         fields = ['username', 'email', 'phone_number', 'profile_picture', 'contact_info_visibility']
-        labels = {
-            'username': 'Username',
-            'email': 'Email',
-            'phone_number': 'Phone Number',
-            'profile_picture': 'Profile Picture',
-            'contact_info_visibility': 'Show Contact Info Publicly',
-        }
+        # labels = {
+        #     'username': 'Username',
+        #     'email': 'Email',
+        #     'phone_number': 'Phone Number',
+        #     'profile_picture': 'Profile Picture',
+        #     'contact_info_visibility': 'Show Contact Info Publicly',
+        # }
