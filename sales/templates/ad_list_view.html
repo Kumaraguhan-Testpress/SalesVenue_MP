@@ -1,81 +1,63 @@
 {% extends "base.html" %}
 {% block content %}
+    <h1 class="page-title">Ads For You</h1>
 
-    {% if not user.is_authenticated %}
-        <div class="welcome-banner">
-            <h1>Welcome to SalesVenue</h1>
-            <p>
-                <strong>SalesVenue</strong> is your go-to marketplace for discovering, buying, and selling a wide range of products and services.
-                Whether you're an individual looking for great deals, a small business trying to reach more customers, or a service provider
-                offering local expertise — <strong>SalesVenue is made for you!</strong>
-            </p>
-            <p>
-                Create an account today to unlock full access, post your own ads, and connect with buyers and sellers in your area.
-            </p>
-            <a href="{% url 'signup' %}" class="btn btn-primary">Get Started - Sign Up</a>
-        </div>
-
-    {% else %}
-        <h1 class="page-title">Ads For You</h1>
-        <a href="{% url 'ad_create' %}" class="btn btn-primary">+ Create New Ad</a> <br></br>
-
-        {% for ad in ads %}
-            <div class="ad-card">
-                <div class="ad-card-body">
-                    <h2 class="ad-title"><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h2>
-                    <div class="ad-details">
-                        <p><strong>Category:</strong> {{ ad.category.name }}</p>
-                        <p><strong>Price:</strong>
-                            {% if ad.price %}
-                                ${{ ad.price }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </p>
-                        <p><strong>Location:</strong> {{ ad.location }}</p>
-                        <p class="ad-posted-by">Posted by: {{ ad.user.username }} on {{ ad.created_at|date:"F d, Y" }}</p>
-                    </div>
-
-                    {% if ad.images.first %}
-                        <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" class="ad-image">
-                    {% endif %}
+    {% for ad in ads %}
+        <div class="ad-card">
+            <div class="ad-card-body">
+                <h2 class="ad-title"><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h2>
+                <div class="ad-details">
+                    <p><strong>Category:</strong> {{ ad.category.name }}</p>
+                    <p><strong>Price:</strong>
+                        {% if ad.price %}
+                            ${{ ad.price }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                    <p><strong>Location:</strong> {{ ad.location }}</p>
+                    <p class="ad-posted-by">Posted by: {{ ad.user.username }} on {{ ad.created_at|date:"F d, Y" }}</p>
                 </div>
+                
+                {% if ad.images.first %}
+                    <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" class="ad-image">
+                {% endif %}
             </div>
-        {% empty %}
-            <p class="no-ads-message">No ads are currently available.</p>
-        {% endfor %}
+        </div>
+    {% empty %}
+        <p class="no-ads-message">No ads are currently available.</p>
+    {% endfor %}
 
-        {% if is_paginated %}
-            <nav class="pagination-nav">
-                <ul class="pagination-list">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link">Previous</span>
-                        </li>
-                    {% endif %}
-
-                    <li class="page-item disabled">
-                        <span class="page-link">
-                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-                        </span>
+    {% if is_paginated %}
+        <nav class="pagination-nav">
+            <ul class="pagination-list">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
                     </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Previous</span>
+                    </li>
+                {% endif %}
 
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link">Next</span>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Next</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
     {% endif %}
 
 {% endblock %}

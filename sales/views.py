@@ -23,7 +23,7 @@ class AdListView(ListView):
                                                 .prefetch_related('images') \
                                                 .order_by('-created_at')
 
-class AdDetailView(LoginRequiredMixin, DetailView):
+class AdDetailView(LoginRequiredMixin ,DetailView):
     model = Ad
     template_name = 'ad_detail_view.html'
     context_object_name = 'ad'

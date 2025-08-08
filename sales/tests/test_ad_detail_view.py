@@ -89,7 +89,7 @@ class AdDetailViewTest(TestCase):
         response = self.client.get(self.ad.get_absolute_url())
         self.assertContains(response, self.ad_owner.username)
 
-    def test_contact_info_hidden_if_not_visible_to_user(self):        
+    def test_contact_info_hidden_if_not_visible_to_user(self):
         self.ad.contact_info_visibility = False
         self.ad.save()
         self.client.login(username='testuser', password='password')
