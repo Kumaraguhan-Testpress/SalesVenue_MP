@@ -14,9 +14,9 @@ class AdListView(ListView):
         if not request.user.is_authenticated:
             # If not authenticated, render a different template with a welcome message
             return render(request, 'welcome.html')
-        
-        return super().dispatch(request, *args, **kwargs)
 
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_queryset(self):
         return Ad.objects.filter(is_active=True).select_related('user', 'category') \
                                                 .prefetch_related('images') \
