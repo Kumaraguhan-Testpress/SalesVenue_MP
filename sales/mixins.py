@@ -1,8 +1,8 @@
-from django.contrib.auth.mixins import UserPassesTestMixin
+from django.core.exceptions import PermissionDenied
 
-class AdOwnerRequiredMixin(UserPassesTestMixin):
-    """Allow access only if the current user is the owner of the Ad."""
-
-    def test_func(self):
+class AdOwnerRequiredMixin:
+    def dispatch(self, request, *args, **kwargs):
         ad = self.get_object()
-        return self.request.user == ad.user
+        if ad.user != request.user:
+            raise PermissionDenied("You do not have permission to modify this ad.")
+        return super().dispatch(request, *args, **kwargs)
