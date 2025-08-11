@@ -44,6 +44,12 @@ class AdImageAdmin(admin.ModelAdmin):
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
     list_display = ['ad_title', 'sender', 'recipient', 'sent_at', 'read']
+    list_select_related = (
+        'conversation',
+        'conversation__ad',
+        'conversation__ad__user',  # ad owner
+        'sender',
+    )
     list_filter = ['read', 'sent_at']
     search_fields = ['content', 'conversation__ad__title', 'sender__username', 'sender__email']
     date_hierarchy = 'sent_at'

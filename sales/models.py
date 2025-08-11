@@ -84,7 +84,7 @@ class Conversation(models.Model):
     (ad_id, buyer) pair is unique so owner can have multiple buyers.
     """
     ad = models.ForeignKey('Ad', on_delete=models.CASCADE, related_name='conversations')
-    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='owned_conversations')
+    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='owned_conversations', editable=False)
     buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='buyer_conversations')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -98,12 +98,22 @@ class Conversation(models.Model):
     def other_user(self, user):
         return self.buyer if user == self.owner else self.owner
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.buyer == self.ad.user:
+            raise ValidationError("A user cannot start a conversation on their own ad.")
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # When creating a new conversation
+            self.owner = self.ad.user
+        super().save(*args, **kwargs)
+
 class Message(models.Model):
     """
     Represents a private message sent between two users regarding a specific ad.
     """
 
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages', help_text="The Pair of ad_id and buyer, the owner can use per ad message")
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages', help_text="The conversation this message belongs to.")
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages', help_text="The user who sent the message.")
     content = models.TextField(help_text="The content of the message.")
     sent_at = models.DateTimeField(auto_now_add=True, help_text="The date and time the message was sent.")
