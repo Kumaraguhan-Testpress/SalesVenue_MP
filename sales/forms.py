@@ -1,6 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import Ad, AdImage
+from .models import Ad, AdImage, Message
 
 class AdForm(forms.ModelForm):
     class Meta:
@@ -23,3 +23,11 @@ AdImageFormSet = inlineformset_factory(
     extra=3,
     can_delete=True
 )
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={'rows':2, 'placeholder':'Write your message...','class':'form-control'}),
+        }

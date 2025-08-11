@@ -2,11 +2,21 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from sales.views import (
+    StartConversationView, ConversationListView, ConversationDetailView,
+    SendMessageView, ConversationMessagesJSONView, AdConversationListView
+)
 
 urlpatterns = [
     path('', include('sales.urls')),
     path('accounts/', include('accounts.urls')),
     path('admin/', admin.site.urls),
+    path('ads/<int:ad_id>/message/', StartConversationView.as_view(), name='start_conversation'),
+    path('conversations/', ConversationListView.as_view(), name='conversation_list'),
+    path('conversations/<int:pk>/', ConversationDetailView.as_view(), name='conversation_detail'),
+    path('conversations/<int:pk>/send/', SendMessageView.as_view(), name='send_message'),
+    path('conversations/<int:pk>/messages_json/', ConversationMessagesJSONView.as_view(), name='conversation_messages_json'),
+    path('ads/<int:ad_id>/conversations/', AdConversationListView.as_view(), name='conversation_list_for_ad'),
 ]
 
 if settings.DEBUG:

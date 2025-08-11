@@ -1,11 +1,14 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from .models import Ad
+from django.views.generic import View, ListView, DetailView, CreateView, UpdateView, DeleteView
+from .models import Ad, Conversation, Message
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .forms import AdForm, AdImageFormSet
+from .forms import AdForm, AdImageFormSet, MessageForm
 from .mixins import AdOwnerRequiredMixin
+from django.http import JsonResponse, HttpResponseForbidden
+from django.utils import timezone
+from django.db.models import Q
 
 class AdListView(ListView):
     model = Ad
@@ -92,3 +95,138 @@ class AdDeleteView(LoginRequiredMixin, AdOwnerRequiredMixin, DeleteView):
     pk_url_kwarg = 'ad_id'
     success_url = reverse_lazy('ad_list')
 
+class StartConversationView(LoginRequiredMixin, View):
+    """
+    GET: Create or retrieve a conversation for an ad.
+    Redirect to the conversation detail page.
+    """
+    def get(self, request, ad_id, *args, **kwargs):
+        ad = get_object_or_404(Ad, pk=ad_id, is_active=True)
+        owner = ad.user
+        buyer = request.user
+
+        if owner == buyer:
+            # Owner should go to their own conversations list
+            return redirect('conversation_list_for_ad', ad_id=ad.id)
+
+        conversation, created = Conversation.objects.get_or_create(
+            ad=ad,
+            owner=owner,
+            buyer=buyer
+        )
+        return redirect('conversation_detail', pk=conversation.pk)
+
+
+class ConversationListView(LoginRequiredMixin, ListView):
+    model = Conversation
+    template_name = 'conversations/list.html'
+    context_object_name = 'conversations'
+
+    def get_queryset(self):
+        user = self.request.user
+        conversations = (
+            Conversation.objects
+            .filter(Q(ad__user=user) | Q(buyer=user))  # Use ad__user instead of owner if you drop owner field
+            .select_related('ad', 'buyer')
+            .order_by('-created_at')
+        )
+
+        for conv in conversations:
+            conv.other_username = conv.other_user(user).username
+
+        return conversations
+
+
+class ConversationDetailView(LoginRequiredMixin, DetailView):
+    model = Conversation
+    template_name = 'conversations/detail.html'
+    context_object_name = 'conversation'
+
+    def dispatch(self, request, *args, **kwargs):
+        conversation = self.get_object()
+        if request.user not in (conversation.owner, conversation.buyer):
+            return HttpResponseForbidden("You don't have access to this conversation.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        conversation = self.object
+        context['messages'] = conversation.messages.select_related('sender').all()
+        context['form'] = MessageForm()
+        context["other_user"] = conversation.other_user(self.request.user)
+        return context
+
+
+class SendMessageView(LoginRequiredMixin, View):
+    """
+    POST endpoint for sending a message in a conversation (AJAX).
+    """
+    def post(self, request, pk, *args, **kwargs):
+        conversation = get_object_or_404(Conversation, pk=pk)
+        if request.user not in (conversation.owner, conversation.buyer):
+            return JsonResponse({'error': 'forbidden'}, status=403)
+
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.conversation = conversation
+            msg.sender = request.user
+            msg.sent_at = timezone.now()
+            msg.save()
+            return JsonResponse({
+                'id': msg.pk,
+                'sender': msg.sender.username,
+                'content': msg.content,
+                'sent_at': msg.sent_at.isoformat(),
+            })
+        return JsonResponse({'errors': form.errors}, status=400)
+
+
+class ConversationMessagesJSONView(LoginRequiredMixin, View):
+    """
+    GET: Return messages in JSON for a given conversation.
+    Optional ?after=<timestamp> to get only new messages.
+    """
+    def get(self, request, pk, *args, **kwargs):
+        conversation = get_object_or_404(Conversation, pk=pk)
+        if request.user not in (conversation.owner, conversation.buyer):
+            return JsonResponse({'error': 'forbidden'}, status=403)
+
+        after = request.GET.get('after')
+        qs = conversation.messages.select_related('sender').all()
+        if after:
+            from django.utils.dateparse import parse_datetime
+            dt = parse_datetime(after)
+            if dt:
+                qs = qs.filter(sent_at__gt=dt)
+
+        data = [{
+            'id': m.pk,
+            'sender': m.sender.username,
+            'sender_id': m.sender_id,
+            'content': m.content,
+            'sent_at': m.sent_at.isoformat(),
+            'read': m.read
+        } for m in qs]
+        return JsonResponse({'messages': data})
+
+
+class AdConversationListView(LoginRequiredMixin, ListView):
+    """
+    Shows all conversations for a specific ad to its owner.
+    """
+    model = Conversation
+    template_name = 'conversations/ad_conversations.html'
+    context_object_name = 'conversations'
+
+    def get_queryset(self):
+        ad_id = self.kwargs['ad_id']
+        ad = get_object_or_404(Ad, pk=ad_id)
+        if ad.user != self.request.user:
+            return Conversation.objects.none()  # or raise 403
+        return ad.conversations.select_related('buyer').all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['ad'] = get_object_or_404(Ad, pk=self.kwargs['ad_id'])
+        return context
