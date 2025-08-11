@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
 from .forms import AdForm, AdImageFormSet
+from .mixins import AdOwnerRequiredMixin
 
 class AdListView(ListView):
     model = Ad
@@ -78,20 +79,16 @@ class AdCreateView(LoginRequiredMixin, AdImageFormsetMixin, CreateView):
         form.instance.user = self.request.user
         return super().form_valid(form)
 
-class AdUpdateView(LoginRequiredMixin, UserPassesTestMixin, AdImageFormsetMixin, UpdateView):
+class AdUpdateView(LoginRequiredMixin, AdOwnerRequiredMixin, AdImageFormsetMixin, UpdateView):
     model = Ad
     template_name = 'ad_form.html'
     form_class = AdForm
+    pk_url_kwarg = 'ad_id'
     success_message = "Ad updated successfully!"
 
-    def test_func(self):
-        return self.request.user == self.get_object().user
-
-class AdDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+class AdDeleteView(LoginRequiredMixin, AdOwnerRequiredMixin, DeleteView):
     model = Ad
     template_name = 'ad_confirm_delete.html'
+    pk_url_kwarg = 'ad_id'
     success_url = reverse_lazy('ad_list')
 
-    def test_func(self):
-        ad = self.get_object()
-        return self.request.user == ad.user
