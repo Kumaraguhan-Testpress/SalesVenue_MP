@@ -78,18 +78,39 @@ class AdImage(OrderedModel):
     def __str__(self):
         return f"Image for Ad: {self.ad.title}"
 
+class Conversation(models.Model):
+    """
+    Unique conversation between ad owner and a buyer, per ad.
+    (ad_id, buyer) pair is unique so owner can have multiple buyers.
+    """
+    ad = models.ForeignKey('Ad', on_delete=models.CASCADE, related_name='conversations')
+    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='owned_conversations')
+    buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='buyer_conversations')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('ad', 'buyer')
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return f"Conversation: Ad({self.ad_id}) owner={self.owner_id} buyer={self.buyer_id}"
+
+    def other_user(self, user):
+        return self.buyer if user == self.owner else self.owner
 
 class Message(models.Model):
     """
     Represents a private message sent between two users regarding a specific ad.
     """
 
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages', help_text="The Pair of ad_id and buyer, the owner can use per ad message")
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages', help_text="The user who sent the message.")
-    recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_messages', help_text="The user who is the recipient of the message.")
-    ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name='messages', help_text="The ad that this message is in reference to.")
     content = models.TextField(help_text="The content of the message.")
     sent_at = models.DateTimeField(auto_now_add=True, help_text="The date and time the message was sent.")
     read = models.BooleanField(default=False, help_text="Indicates whether the recipient has read the message.") 
 
+    class Meta:
+        ordering = ('sent_at',)
+
     def __str__(self):
-        return f"Message from {self.sender.username} to {self.recipient.username}"
+        return f"Msg({self.pk}) conv={self.conversation_id} from={self.sender_id}"
