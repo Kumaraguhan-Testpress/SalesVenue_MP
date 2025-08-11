@@ -21,6 +21,6 @@ AdImageFormSet = inlineformset_factory(
     Ad,
     AdImage,
     form=AdImageForm,
-    extra=3,        # Show 3 image fields by default
-    can_delete=True # Allow removing images in update view
+    extra=3,
+    can_delete=True
 )

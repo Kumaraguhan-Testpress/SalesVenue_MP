@@ -46,61 +46,46 @@ class AdDetailView(LoginRequiredMixin ,DetailView):
 
         return context
 
-class AdCreateView(LoginRequiredMixin, CreateView):
-    model = Ad
-    template_name = 'ad_form.html'
-    form_class = AdForm
-
+class AdImageFormsetMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
-            context['images_formset'] = AdImageFormSet(self.request.POST, self.request.FILES)
+            context['images_formset'] = AdImageFormSet(
+                self.request.POST, self.request.FILES, instance=getattr(self, 'object', None)
+            )
         else:
-            context['images_formset'] = AdImageFormSet()
+            context['images_formset'] = AdImageFormSet(instance=getattr(self, 'object', None))
         return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        images_formset = context['images_formset']
+        if images_formset.is_valid():
+            self.object = form.save()
+            images_formset.instance = self.object
+            images_formset.save()
+            messages.success(self.request, self.success_message)
+            return redirect(self.object.get_absolute_url())
+        return self.render_to_response(self.get_context_data(form=form))
+
+class AdCreateView(LoginRequiredMixin, AdImageFormsetMixin, CreateView):
+    model = Ad
+    template_name = 'ad_form.html'
+    form_class = AdForm
+    success_message = "Ad created successfully!"
 
     def form_valid(self, form):
         form.instance.user = self.request.user
-        context = self.get_context_data()
-        images_formset = context['images_formset']
-        if images_formset.is_valid():
-            self.object = form.save()
-            images_formset.instance = self.object
-            images_formset.save()
-            messages.success(self.request, "Ad created successfully!")
-            return redirect(self.object.get_absolute_url())
-        else:
-            return self.render_to_response(self.get_context_data(form=form))
+        return super().form_valid(form)
 
-
-class AdUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+class AdUpdateView(LoginRequiredMixin, UserPassesTestMixin, AdImageFormsetMixin, UpdateView):
     model = Ad
     template_name = 'ad_form.html'
     form_class = AdForm
+    success_message = "Ad updated successfully!"
 
     def test_func(self):
         return self.request.user == self.get_object().user
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['images_formset'] = AdImageFormSet(self.request.POST, self.request.FILES, instance=self.object)
-        else:
-            context['images_formset'] = AdImageFormSet(instance=self.object)
-        return context
-
-    def form_valid(self, form):
-        context = self.get_context_data()
-        images_formset = context['images_formset']
-        if images_formset.is_valid():
-            self.object = form.save()
-            images_formset.instance = self.object
-            images_formset.save()
-            messages.success(self.request, "Ad updated successfully!")
-            return redirect(self.object.get_absolute_url())
-        else:
-            return self.render_to_response(self.get_context_data(form=form))
-
 
 class AdDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Ad
