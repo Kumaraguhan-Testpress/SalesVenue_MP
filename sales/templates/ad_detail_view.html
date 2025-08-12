@@ -42,6 +42,12 @@
             <p><em>Ad contact information is hidden.</em></p>
         {% endif %}
 
+        {% if request.user.is_authenticated and ad.user != request.user %}
+            <a href="{% url 'start_conversation' ad.pk %}" class="btn btn-primary">Message Seller</a>
+        {% elif ad.user == request.user %}
+            <a href="{% url 'conversation_list_for_ad' ad.pk%}" class="btn btn-secondary">View Conversations</a>
+        {% endif %}
+
         {% if ad.user == request.user %}
             <a href="{% url 'ad_update' ad.pk %}" class="btn btn-warning">Edit</a>
             <a href="{% url 'ad_delete' ad.pk %}" class="btn btn-danger">Delete</a>
