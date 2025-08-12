@@ -35,56 +35,55 @@
   const form = document.getElementById('message-form');
   let lastTimestamp = null;
 
-  function isoNowMinus(ms){ return new Date(Date.now() - ms).toISOString(); }
-
-  // track last message timestamp
   function updateLastTimestamp() {
-    const last = messagesEl.querySelector('[data-id]:last-child');
-    if(last){
-      // we can't easily get server timestamp from DOM unless we include it. For initial load, set to now.
-      lastTimestamp = new Date().toISOString();
-    }
+  const messages = messagesEl.querySelectorAll('.message');
+  if (messages.length > 0) {
+    lastTimestamp = messages[messages.length - 1].dataset.sentAt;
   }
-  updateLastTimestamp();
-
+}
+  
   // Append a message to messagesEl
-  function appendMessage(m){
+  function appendMessage(m) {
     const div = document.createElement('div');
-    div.className = 'message ' + ((m.sender_id == {{ request.user.id }}) ? 'me':'them');
+    div.className = 'message ' + ((m.sender_id == {{ request.user.id }}) ? 'me' : 'them');
     div.dataset.id = m.id;
+    div.dataset.sentAt = m.sent_at;
     const header = document.createElement('small');
     header.innerHTML = '<strong>' + m.sender + '</strong> <em>' + (new Date(m.sent_at)).toLocaleString() + '</em>';
     const body = document.createElement('div');
-    body.innerHTML = m.content.replace(/\n/g,'<br/>');
+    body.innerHTML = m.content.replace(/\n/g, '<br/>');
     div.appendChild(header);
     div.appendChild(body);
     messagesEl.appendChild(div);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+    lastTimestamp = m.sent_at;
   }
 
   // Polling for new messages
-  async function poll(){
+  async function poll() {
     let url = `{% url 'conversation_messages_json' conversation.pk %}`;
-    if(lastTimestamp){
+    if (lastTimestamp) {
       url += '?after=' + encodeURIComponent(lastTimestamp);
     }
-    try{
-      const resp = await fetch(url, {credentials:'same-origin'});
-      if(!resp.ok) return;
+    try {
+      const resp = await fetch(url, {credentials: 'same-origin'});
+      if (!resp.ok) return;
       const data = await resp.json();
-      if(data.messages && data.messages.length){
+      if (data.messages && data.messages.length) {
         data.messages.forEach(m => appendMessage(m));
-        // set lastTimestamp to latest message sent_at
-        lastTimestamp = data.messages[data.messages.length - 1].sent_at;
       }
-    }catch(e){ console.error(e); }
+    } catch (e) { console.error(e); }
   }
 
-  // initial polling every 3 seconds
-  setInterval(poll, 3000);
+  // Wait for the DOM to be fully loaded before starting the poll
+  document.addEventListener('DOMContentLoaded', (event) => {
+    updateLastTimestamp(); // Set timestamp after DOM is ready
+    setInterval(poll, 3000); // Start polling after timestamp is set
+    messagesEl.scrollTop = messagesEl.scrollHeight; // Ensure scroll to bottom
+  });
 
   // Handle send via AJAX
-  form.addEventListener('submit', async function(e){
+  form.addEventListener('submit', async function(e) {
     e.preventDefault();
     const fd = new FormData(form);
     const sendBtn = document.getElementById('send-btn');
@@ -98,9 +97,8 @@
       }
     });
     sendBtn.disabled = false;
-    if(resp.ok){
+    if (resp.ok) {
       const json = await resp.json();
-      // add message to UI
       appendMessage({
         id: json.id,
         sender: json.sender,
@@ -108,17 +106,16 @@
         content: json.content,
         sent_at: json.sent_at
       });
-      // clear textarea:
       const ta = form.querySelector('textarea');
-      if(ta){ ta.value = ''; }
+      if (ta) { ta.value = ''; }
       lastTimestamp = json.sent_at;
     } else {
       const json = await resp.json();
       alert(json.error || 'Failed to send message.');
     }
   });
+// ensure scroll to bottom on load
 
-  // ensure scroll to bottom on load
   messagesEl.scrollTop = messagesEl.scrollHeight;
 })();
 </script>
