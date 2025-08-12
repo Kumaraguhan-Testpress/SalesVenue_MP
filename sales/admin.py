@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Category, Ad, Message, AdImage
+from .models import CustomUser, Category, Ad, Message, AdImage, Conversation
 from ordered_model.admin import OrderedTabularInline
 
 
@@ -43,8 +43,28 @@ class AdImageAdmin(admin.ModelAdmin):
 
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ['ad', 'sender', 'recipient', 'sent_at', 'read']
+    list_display = ['ad_title', 'sender', 'recipient', 'sent_at', 'read']
+    list_select_related = (
+        'conversation',
+        'conversation__ad',
+        'conversation__ad__user',  # ad owner
+        'sender',
+    )
     list_filter = ['read', 'sent_at']
-    search_fields = ['content']
+    search_fields = ['content', 'conversation__ad__title', 'sender__username', 'sender__email']
     date_hierarchy = 'sent_at'
-    raw_id_fields = ['sender', 'recipient', 'ad']
+    raw_id_fields = ['conversation', 'sender']
+
+    def ad_title(self, obj):
+        return obj.conversation.ad.title
+    ad_title.short_description = 'Ad'
+
+    def recipient(self, obj):
+        return obj.conversation.other_user(obj.sender)
+    recipient.short_description = 'Recipient'
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = ['ad', 'owner', 'buyer', 'created_at']
+    search_fields = ['ad__title', 'owner__username', 'buyer__username']
+    raw_id_fields = ['ad', 'owner', 'buyer']
