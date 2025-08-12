@@ -50,9 +50,10 @@ class AdListViewTests(TestCase):
 
     def test_correct_template_used(self):
         response = self.client.get(reverse('ad_list'))
-        self.assertTemplateUsed(response, 'ad_list_view.html')
+        self.assertTemplateUsed(response, 'welcome.html')
 
     def test_only_active_ads_displayed(self):
+        self.client.force_login(self.user)
         response = self.client.get(reverse('ad_list'))
         ads = response.context['ads']
         self.assertIn(self.active_ad1, ads)
@@ -67,6 +68,7 @@ class AdListViewTests(TestCase):
         self.assertContains(response, 'No ads are currently available.')
 
     def test_pagination_is_working(self):
+        self.client.force_login(self.user)
         for i in range(11):
             Ad.objects.create(
                 user=self.user,

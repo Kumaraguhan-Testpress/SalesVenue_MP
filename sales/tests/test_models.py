@@ -1,7 +1,7 @@
 import os
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from ..models import CustomUser, Category, Ad, AdImage, Message
+from ..models import CustomUser, Category, Ad, AdImage, Message, Conversation
 from ordered_model.models import OrderedModel
 from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -101,8 +101,9 @@ class AdImageModelTest(TestCase):
 
 class MessageModelTest(TestCase):
     def setUp(self):
-        self.sender = User.objects.create_user(username='sender', password='password')
-        self.recipient = User.objects.create_user(username='recipient', password='password')
+        self.sender = CustomUser.objects.create_user(username='sender', password='password')
+        self.recipient = CustomUser.objects.create_user(username='recipient', password='password')
+
         self.category = Category.objects.create(name='General')
         self.ad = Ad.objects.create(
             user=self.recipient,
@@ -112,27 +113,29 @@ class MessageModelTest(TestCase):
             location='Test Location',
             contact_info='test@example.com'
         )
+        self.conversation = Conversation.objects.create(
+            ad=self.ad,
+            buyer=self.sender
+        )
 
     def test_message_creation(self):
-        """Test that a message can be created."""
-
         message = Message.objects.create(
+            conversation=self.conversation,
             sender=self.sender,
-            recipient=self.recipient,
-            ad=self.ad,
             content='Hello, I am interested in this ad.'
         )
+
+        self.assertEqual(message.conversation, self.conversation)
         self.assertEqual(message.sender, self.sender)
-        self.assertEqual(message.recipient, self.recipient)
-        self.assertEqual(message.ad, self.ad)
         self.assertEqual(message.content, 'Hello, I am interested in this ad.')
         self.assertFalse(message.read)
+        self.assertIsNotNone(message.sent_at)
 
     def test_str_representation(self):
         message = Message.objects.create(
+            conversation=self.conversation,
             sender=self.sender,
-            recipient=self.recipient,
-            ad=self.ad,
             content='Test message.'
         )
-        self.assertEqual(str(message), 'Message from sender to recipient')
+        expected_str = f"Msg({message.pk}) conv={self.conversation.id} from={self.sender.id}"
+        self.assertEqual(str(message), expected_str)
