@@ -103,7 +103,6 @@ class StartConversationView(LoginRequiredMixin, View):
         buyer = request.user
 
         if owner == buyer:
-            # Owner should go to their own conversations list
             return redirect('conversation_list_for_ad', ad_id=ad.id)
 
         conversation, created = Conversation.objects.get_or_create(
@@ -111,7 +110,7 @@ class StartConversationView(LoginRequiredMixin, View):
             owner=owner,
             buyer=buyer
         )
-        return redirect('conversation_detail', pk=conversation.pk)
+        return redirect('conversation_detail', conversation_id=conversation.pk)
 
 
 class ConversationListView(LoginRequiredMixin, ListView):
