@@ -117,6 +117,7 @@ class Message(models.Model):
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages', help_text="The user who sent the message.")
     content = models.TextField(help_text="The content of the message.")
     sent_at = models.DateTimeField(auto_now_add=True, help_text="The date and time the message was sent.")
+    updated_at = models.DateTimeField(auto_now=True, help_text="Last time the message was updated.")
     read = models.BooleanField(default=False, help_text="Indicates whether the recipient has read the message.") 
 
     class Meta:
