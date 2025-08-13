@@ -12,6 +12,7 @@ from django.db.models import Q, Case, When, F
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
+from django.views.generic import TemplateView
 
 class AdListView(ListView):
     model = Ad
@@ -348,3 +349,17 @@ class DeleteMessageView(LoginRequiredMixin, View):
 
     def _build_success_response(self, message_id):
         return JsonResponse({'success': True, 'id': message_id})
+
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        conversations = Conversation.objects.filter(owner=user) | Conversation.objects.filter(buyer=user)
+        conversations = conversations.select_related('ad', 'owner', 'buyer')
+
+        context["user_obj"] = user
+        context["conversations"] = conversations
+        return context
