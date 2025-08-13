@@ -289,6 +289,7 @@ class AdConversationListView(LoginRequiredMixin, ListView):
         context['ad'] = self.ad
         return context
 
+@method_decorator(require_http_methods(["POST"]), name='dispatch')
 class UpdateMessageView(LoginRequiredMixin, View):
     def post(self, request, message_id, *args, **kwargs):
         message_instance = self._get_message_or_forbidden(message_id, request.user)
@@ -326,6 +327,7 @@ class UpdateMessageView(LoginRequiredMixin, View):
             'updated_at': message_instance.updated_at.isoformat(),
         })
 
+@method_decorator(require_http_methods(["POST"]), name='dispatch')
 class DeleteMessageView(LoginRequiredMixin, View):
     def post(self, request, message_id, *args, **kwargs):
         message_instance = self._get_message_or_forbidden(message_id, request.user)
