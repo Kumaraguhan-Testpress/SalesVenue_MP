@@ -62,10 +62,11 @@ body.appendChild(document.createTextNode(line));
 }
 
 
-  async function poll() {
+  // In your script tag, replace the old poll function with this one
+async function poll() {
     let url = `{% url 'conversation_messages_json' conversation.pk %}`;
     if (lastTimestamp) {
-      url += '?after=' + encodeURIComponent(lastTimestamp);
+        url += '?after=' + encodeURIComponent(lastTimestamp);
     }
     try {
       const resp = await fetch(url, {credentials: 'same-origin'});
