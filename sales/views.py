@@ -219,40 +219,58 @@ class SendMessageView(LoginRequiredMixin, View):
 
 class ConversationMessagesJSONView(LoginRequiredMixin, View):
     def get(self, request, conversation_id, *args, **kwargs):
-        conversation = get_object_or_404(Conversation, pk=conversation_id)
-        if request.user not in (conversation.owner, conversation.buyer):
-            return JsonResponse({'error': 'forbidden'}, status=403)
+        conversation_instance = self._get_conversation_or_forbidden(conversation_id, request.user)
+        if isinstance(conversation_instance, JsonResponse):
+            return conversation_instance
 
-        after = request.GET.get('after')
-        qs = conversation.messages.select_related('sender').all()
-        
-        all_messages_qs = qs.order_by('sent_at')
+        after_param = request.GET.get('after')
+        all_messages_queryset = self._get_all_messages(conversation_instance)
+        updated_or_new_messages_queryset = self._get_updated_or_new_messages(conversation_instance, after_param)
 
-        if after:
-            dt = parse_datetime(after)
-            if dt:
-                updated_or_new_qs = qs.filter(Q(sent_at__gt=dt) | Q(updated_at__gt=dt))
-            else:
-                updated_or_new_qs = qs.none()
-        else:
-            updated_or_new_qs = qs
-
-        all_message_ids = list(all_messages_qs.values_list('pk', flat=True))
-
-        data = [{
-            'id': m.pk,
-            'sender': m.sender.username,
-            'sender_id': m.sender_id,
-            'content': m.content,
-            'sent_at': m.sent_at.isoformat(),
-            'updated_at': m.updated_at.isoformat() if m.updated_at else None,
-            'read': m.read
-        } for m in updated_or_new_qs]
+        all_message_ids = self._get_message_ids(all_messages_queryset)
+        serialized_messages = self._serialize_messages(updated_or_new_messages_queryset)
 
         return JsonResponse({
-            'messages': data,
+            'messages': serialized_messages,
             'all_ids': all_message_ids
         })
+
+    def _get_conversation_or_forbidden(self, conversation_id, current_user):
+        conversation_instance = get_object_or_404(Conversation, pk=conversation_id)
+        if current_user not in (conversation_instance.owner, conversation_instance.buyer):
+            return JsonResponse({'error': 'forbidden'}, status=403)
+        return conversation_instance
+
+    def _get_all_messages(self, conversation_instance):
+        return conversation_instance.messages.select_related('sender').all().order_by('sent_at')
+
+    def _get_updated_or_new_messages(self, conversation_instance, after_param):
+        messages_queryset = conversation_instance.messages.select_related('sender').all()
+        if not after_param:
+            return messages_queryset
+        after_datetime = parse_datetime(after_param)
+        if after_datetime:
+            return messages_queryset.filter(
+                Q(sent_at__gt=after_datetime) | Q(updated_at__gt=after_datetime)
+            )
+        return messages_queryset.none()
+
+    def _get_message_ids(self, messages_queryset):
+        return list(messages_queryset.values_list('pk', flat=True))
+
+    def _serialize_messages(self, messages_queryset):
+        return [
+            {
+                'id': message.pk,
+                'sender': message.sender.username,
+                'sender_id': message.sender_id,
+                'content': message.content,
+                'sent_at': message.sent_at.isoformat(),
+                'updated_at': message.updated_at.isoformat() if message.updated_at else None,
+                'read': message.read
+            }
+            for message in messages_queryset
+        ]
 
 class AdConversationListView(LoginRequiredMixin, ListView):
     model = Conversation
