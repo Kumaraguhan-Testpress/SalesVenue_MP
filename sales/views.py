@@ -98,20 +98,35 @@ class AdDeleteView(LoginRequiredMixin, AdOwnerRequiredMixin, DeleteView):
 
 class StartConversationView(LoginRequiredMixin, View):
     def get(self, request, ad_id, *args, **kwargs):
-        ad_instance = get_object_or_404(Ad, pk=ad_id, is_active=True)
-        ad_owner_user = ad_instance.user
-        current_user = request.user
+        ad_instance = self._get_active_ad_or_404(ad_id)
+        owner_user = ad_instance.user
+        buyer_user = request.user
 
-        if ad_owner_user == current_user:
-            return redirect('conversation_list_for_ad', ad_id=ad_instance.id)
+        if self._is_owner_starting_conversation(owner_user, buyer_user):
+            return self._redirect_to_ad_conversations(ad_instance.id)
 
-        conversation_instance, created = Conversation.objects.get_or_create(
+        conversation_instance = self._get_or_create_conversation(ad_instance, owner_user, buyer_user)
+        return self._redirect_to_conversation_detail(conversation_instance.pk)
+
+    def _get_active_ad_or_404(self, ad_id):
+        return get_object_or_404(Ad, pk=ad_id, is_active=True)
+
+    def _is_owner_starting_conversation(self, owner_user, buyer_user):
+        return owner_user == buyer_user
+
+    def _redirect_to_ad_conversations(self, ad_id):
+        return redirect('conversation_list_for_ad', ad_id=ad_id)
+
+    def _get_or_create_conversation(self, ad_instance, owner_user, buyer_user):
+        conversation, _ = Conversation.objects.get_or_create(
             ad=ad_instance,
-            owner=ad_owner_user,
-            buyer=current_user
+            owner=owner_user,
+            buyer=buyer_user
         )
-        return redirect('conversation_detail', conversation_id=conversation_instance.pk)
+        return conversation
 
+    def _redirect_to_conversation_detail(self, conversation_id):
+        return redirect('conversation_detail', conversation_id=conversation_id)
 
 class ConversationListView(LoginRequiredMixin, ListView):
     model = Conversation
@@ -120,21 +135,21 @@ class ConversationListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         current_user = self.request.user
-        return self.get_user_conversations(current_user)
+        return self._get_user_conversations(current_user)
 
-    def get_user_conversations(self, user):
+    def _get_user_conversations(self, user):
         return (
             Conversation.objects
-            .filter(self.get_user_filter(user))
+            .filter(self._get_user_filter(user))
             .select_related('ad', 'buyer', 'ad__user')
-            .annotate(other_username=self.get_other_username_annotation(user))
+            .annotate(other_username=self._get_other_username_annotation(user))
             .order_by('-created_at')
         )
 
-    def get_user_filter(self, user):
+    def _get_user_filter(self, user):
         return Q(ad__user=user) | Q(buyer=user)
 
-    def get_other_username_annotation(self, user):
+    def _get_other_username_annotation(self, user):
         return Case(
             When(ad__user=user, then=F('buyer__username')),
             default=F('ad__user__username'),
@@ -163,25 +178,25 @@ class ConversationDetailView(LoginRequiredMixin, DetailView):
 
 class SendMessageView(LoginRequiredMixin, View):
     def post(self, request, conversation_id, *args, **kwargs):
-        conversation_instance = self.get_conversation_or_forbidden(conversation_id, request.user)
+        conversation_instance = self._get_conversation_or_forbidden(conversation_id, request.user)
         if isinstance(conversation_instance, JsonResponse):
             return conversation_instance
 
         message_form = MessageForm(request.POST)
 
         if message_form.is_valid():
-            message_instance = self.create_message(message_form, conversation_instance, request.user)
-            return self.build_success_response(message_instance)
+            message_instance = self._create_message(message_form, conversation_instance, request.user)
+            return self._build_success_response(message_instance)
 
-        return self.build_error_response(message_form)
+        return self._build_error_response(message_form)
 
-    def get_conversation_or_forbidden(self, conversation_id, user):
+    def _get_conversation_or_forbidden(self, conversation_id, user):
         conversation_instance = get_object_or_404(Conversation, pk=conversation_id)
         if user not in (conversation_instance.owner, conversation_instance.buyer):
             return JsonResponse({'error': 'forbidden'}, status=403)
         return conversation_instance
 
-    def create_message(self, message_form, conversation_instance, sender):
+    def _create_message(self, message_form, conversation_instance, sender):
         message_instance = message_form.save(commit=False)
         message_instance.conversation = conversation_instance
         message_instance.sender = sender
@@ -189,7 +204,7 @@ class SendMessageView(LoginRequiredMixin, View):
         message_instance.save()
         return message_instance
 
-    def build_success_response(self, message_instance):
+    def _build_success_response(self, message_instance):
         return JsonResponse({
             'id': message_instance.pk,
             'sender': message_instance.sender.username,
@@ -197,27 +212,27 @@ class SendMessageView(LoginRequiredMixin, View):
             'sent_at': message_instance.sent_at.isoformat(),
         })
 
-    def build_error_response(self, message_form):
+    def _build_error_response(self, message_form):
         return JsonResponse({'errors': message_form.errors}, status=400)
 
 class ConversationMessagesJSONView(LoginRequiredMixin, View):
     def get(self, request, conversation_id, *args, **kwargs):
-        conversation = self.get_conversation_or_forbidden(conversation_id, request.user)
+        conversation = self._get_conversation_or_forbidden(conversation_id, request.user)
         if isinstance(conversation, JsonResponse):
             return conversation
 
-        messages_queryset = self.get_messages_queryset(conversation, request.GET.get('after'))
-        serialized_messages = self.serialize_messages(messages_queryset)
+        messages_queryset = self._get_messages_queryset(conversation, request.GET.get('after'))
+        serialized_messages = self._serialize_messages(messages_queryset)
 
         return JsonResponse({'messages': serialized_messages})
 
-    def get_conversation_or_forbidden(self, conversation_id, user):
+    def _get_conversation_or_forbidden(self, conversation_id, user):
         conversation = get_object_or_404(Conversation, pk=conversation_id)
         if user not in (conversation.owner, conversation.buyer):
             return JsonResponse({'error': 'forbidden'}, status=403)
         return conversation
 
-    def get_messages_queryset(self, conversation, after_param):
+    def _get_messages_queryset(self, conversation, after_param):
         messages_queryset = conversation.messages.select_related('sender').all()
         if after_param:
             after_datetime = parse_datetime(after_param)
@@ -225,7 +240,7 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
                 messages_queryset = messages_queryset.filter(sent_at__gt=after_datetime)
         return messages_queryset
 
-    def serialize_messages(self, messages_queryset):
+    def _serialize_messages(self, messages_queryset):
         return [
             {
                 'id': message.pk,
