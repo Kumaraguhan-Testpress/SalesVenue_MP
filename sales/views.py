@@ -274,27 +274,57 @@ class AdConversationListView(LoginRequiredMixin, ListView):
 
 class UpdateMessageView(LoginRequiredMixin, View):
     def post(self, request, message_id, *args, **kwargs):
-        msg = get_object_or_404(Message, pk=message_id)
-        if msg.sender != request.user:
-            return JsonResponse({'error': 'forbidden'}, status=403)
+        message_instance = self._get_message_or_forbidden(message_id, request.user)
+        if isinstance(message_instance, JsonResponse):
+            return message_instance
 
+        new_content = self._get_validated_content(request)
+        if isinstance(new_content, JsonResponse):
+            return new_content
+
+        self._update_message_content(message_instance, new_content)
+        return self._build_success_response(message_instance)
+
+    def _get_message_or_forbidden(self, message_id, current_user):
+        message_instance = get_object_or_404(Message, pk=message_id)
+        if message_instance.sender != current_user:
+            return JsonResponse({'error': 'forbidden'}, status=403)
+        return message_instance
+
+    def _get_validated_content(self, request):
         content = request.POST.get('content', '').strip()
         if not content:
             return JsonResponse({'error': 'Content cannot be empty.'}, status=400)
+        return content
 
-        msg.content = content
-        msg.save()
+    def _update_message_content(self, message_instance, new_content):
+        message_instance.content = new_content
+        message_instance.save()
+
+    def _build_success_response(self, message_instance):
         return JsonResponse({
-            'id': msg.pk,
-            'content': msg.content,
-            'updated_at': msg.updated_at.isoformat(),
+            'id': message_instance.pk,
+            'content': message_instance.content,
+            'updated_at': message_instance.updated_at.isoformat(),
         })
 
 class DeleteMessageView(LoginRequiredMixin, View):
     def post(self, request, message_id, *args, **kwargs):
-        msg = get_object_or_404(Message, pk=message_id)
-        if msg.sender != request.user:
-            return JsonResponse({'error': 'forbidden'}, status=403)
+        message_instance = self._get_message_or_forbidden(message_id, request.user)
+        if isinstance(message_instance, JsonResponse):
+            return message_instance
 
-        msg.delete()
+        self._delete_message(message_instance)
+        return self._build_success_response(message_id)
+
+    def _get_message_or_forbidden(self, message_id, current_user):
+        message_instance = get_object_or_404(Message, pk=message_id)
+        if message_instance.sender != current_user:
+            return JsonResponse({'error': 'forbidden'}, status=403)
+        return message_instance
+
+    def _delete_message(self, message_instance):
+        message_instance.delete()
+
+    def _build_success_response(self, message_id):
         return JsonResponse({'success': True, 'id': message_id})
