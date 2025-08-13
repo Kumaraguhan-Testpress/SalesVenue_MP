@@ -168,6 +168,12 @@ class ConversationDetailView(LoginRequiredMixin, DetailView):
         conversation = self.get_object()
         if request.user not in (conversation.owner, conversation.buyer):
             return HttpResponseForbidden("You don't have access to this conversation.")
+
+        Message.objects.filter(
+            conversation=conversation,
+            read=False
+        ).exclude(sender=request.user).update(read=True)
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -177,7 +183,6 @@ class ConversationDetailView(LoginRequiredMixin, DetailView):
         context['form'] = MessageForm()
         context["other_user"] = conversation.other_user(self.request.user)
         return context
-
 
 class SendMessageView(LoginRequiredMixin, View):
     def post(self, request, conversation_id, *args, **kwargs):
@@ -357,8 +362,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        conversations = Conversation.objects.filter(owner=user) | Conversation.objects.filter(buyer=user)
-        conversations = conversations.select_related('ad', 'owner', 'buyer')
+        conversations = (Conversation.objects.filter(owner=user) | Conversation.objects.filter(buyer=user)) \
+            .select_related('ad', 'owner', 'buyer') \
+            .prefetch_related('messages')
+
+        # Add "other_username" and "has_unread" attributes for the template
+        for conv in conversations:
+            conv.other_username = conv.other_user(user).username
+            conv.has_unread = conv.has_unread_for(user)
 
         context["user_obj"] = user
         context["conversations"] = conversations
