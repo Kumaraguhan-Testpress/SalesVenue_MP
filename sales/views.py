@@ -10,6 +10,8 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.db.models import Q, Case, When, F
 from django.utils.dateparse import parse_datetime
+from django.views.decorators.http import require_http_methods
+from django.utils.decorators import method_decorator
 
 class AdListView(ListView):
     model = Ad
@@ -269,3 +271,30 @@ class AdConversationListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['ad'] = self.ad
         return context
+
+class UpdateMessageView(LoginRequiredMixin, View):
+    def post(self, request, message_id, *args, **kwargs):
+        msg = get_object_or_404(Message, pk=message_id)
+        if msg.sender != request.user:
+            return JsonResponse({'error': 'forbidden'}, status=403)
+
+        content = request.POST.get('content', '').strip()
+        if not content:
+            return JsonResponse({'error': 'Content cannot be empty.'}, status=400)
+
+        msg.content = content
+        msg.save()
+        return JsonResponse({
+            'id': msg.pk,
+            'content': msg.content,
+            'updated_at': msg.updated_at.isoformat(),
+        })
+
+class DeleteMessageView(LoginRequiredMixin, View):
+    def post(self, request, message_id, *args, **kwargs):
+        msg = get_object_or_404(Message, pk=message_id)
+        if msg.sender != request.user:
+            return JsonResponse({'error': 'forbidden'}, status=403)
+
+        msg.delete()
+        return JsonResponse({'success': True, 'id': message_id})

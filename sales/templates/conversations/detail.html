@@ -15,6 +15,10 @@
       data-sent-at="{{ m.sent_at|date:'c' }}">
    <small><strong>{{ m.sender.username }}</strong> <em>{{ m.sent_at|date:"M d, Y H:i" }}</em></small>
    <div>{{ m.content|linebreaksbr }}</div>
+   {% if m.sender == request.user %}
+    <button class="edit-btn btn btn-sm btn-primary">Edit</button>
+    <button class="delete-btn btn btn-sm btn-danger">Delete</button>
+  {% endif %}
    </div>
   <hr />
 {% empty %}
