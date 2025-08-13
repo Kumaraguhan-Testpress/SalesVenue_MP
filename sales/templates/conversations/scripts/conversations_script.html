@@ -64,20 +64,61 @@
 }
 
 
-  async function poll() {
+  // In your script tag, replace the old poll function with this one
+async function poll() {
     let url = `{% url 'conversation_messages_json' conversation.pk %}`;
     if (lastTimestamp) {
-      url += '?after=' + encodeURIComponent(lastTimestamp);
+        url += '?after=' + encodeURIComponent(lastTimestamp);
     }
     try {
-      const resp = await fetch(url, {credentials: 'same-origin'});
-      if (!resp.ok) return;
-      const data = await resp.json();
-      if (data.messages && data.messages.length) {
-        data.messages.forEach(m => appendMessage(m));
-      }
-    } catch (e) { console.error(e); }
-  }
+        const resp = await fetch(url, {credentials: 'same-origin'});
+        if (!resp.ok) return;
+        const data = await resp.json();
+        
+        let mostRecentTimestamp = lastTimestamp;
+
+        if (data.messages && data.messages.length) {
+            data.messages.forEach(m => {
+                const existingMessage = document.querySelector(`.message[data-id='${m.id}']`);
+                if (existingMessage) {
+                    // Message already exists, assume it's an update.
+                    const contentEl = existingMessage.querySelector('.message-content');
+                    if (contentEl && contentEl.innerHTML.trim() !== m.content.trim().replace(/\n/g, '<br>')) {
+                        contentEl.innerHTML = m.content.replace(/\n/g, '<br>');
+                    }
+                } else {
+                    // This is a new message.
+                    appendMessage(m);
+                }
+                
+                if (!mostRecentTimestamp || m.sent_at > mostRecentTimestamp) {
+                    mostRecentTimestamp = m.sent_at;
+                }
+            });
+        }
+        
+        // Handle deletions using the definitive list of all IDs from the server.
+        // This is the core fix.
+        if (data.all_ids) {
+            const allOnScreen = [...messagesEl.querySelectorAll('.message')];
+            const receivedIds = new Set(data.all_ids.map(String)); // Ensure IDs are strings for comparison
+            
+            allOnScreen.forEach(msgDiv => {
+                const msgId = msgDiv.dataset.id;
+                if (!receivedIds.has(msgId)) {
+                    msgDiv.remove();
+                }
+            });
+        }
+        
+        if (mostRecentTimestamp && mostRecentTimestamp > lastTimestamp) {
+            lastTimestamp = mostRecentTimestamp;
+        }
+
+    } catch (e) {
+        console.error(e);
+    }
+}
 
   document.addEventListener('DOMContentLoaded', () => {
     updateLastTimestamp();

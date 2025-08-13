@@ -305,6 +305,7 @@ class UpdateMessageView(LoginRequiredMixin, View):
         return JsonResponse({
             'id': message_instance.pk,
             'content': message_instance.content,
+            'sent_at': message_instance.sent_at.isoformat(),
             'updated_at': message_instance.updated_at.isoformat(),
         })
 
