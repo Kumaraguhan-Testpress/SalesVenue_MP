@@ -226,11 +226,8 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
         after = request.GET.get('after')
         qs = conversation.messages.select_related('sender').all()
         
-        # This is the important change: we'll get two separate querysets.
-        # One for all existing messages, and one for new/updated messages.
         all_messages_qs = qs.order_by('sent_at')
 
-        # Now, we filter the messages to return only new or updated ones.
         if after:
             dt = parse_datetime(after)
             if dt:
@@ -240,7 +237,6 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
         else:
             updated_or_new_qs = qs
 
-        # This will be the list of all message IDs that should exist.
         all_message_ids = list(all_messages_qs.values_list('pk', flat=True))
 
         data = [{
