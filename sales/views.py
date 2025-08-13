@@ -1,11 +1,15 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from .models import Ad
+from django.views.generic import View, ListView, DetailView, CreateView, UpdateView, DeleteView
+from .models import Ad, Conversation, Message
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .forms import AdForm, AdImageFormSet
+from .forms import AdForm, AdImageFormSet, MessageForm
 from .mixins import AdOwnerRequiredMixin
+from django.http import JsonResponse, HttpResponseForbidden
+from django.utils import timezone
+from django.db.models import Q, Case, When, F
+from django.utils.dateparse import parse_datetime
 
 class AdListView(ListView):
     model = Ad
@@ -92,3 +96,176 @@ class AdDeleteView(LoginRequiredMixin, AdOwnerRequiredMixin, DeleteView):
     pk_url_kwarg = 'ad_id'
     success_url = reverse_lazy('ad_list')
 
+class StartConversationView(LoginRequiredMixin, View):
+    def get(self, request, ad_id, *args, **kwargs):
+        ad_instance = self._get_active_ad_or_404(ad_id)
+        owner_user = ad_instance.user
+        buyer_user = request.user
+
+        if self._is_owner_starting_conversation(owner_user, buyer_user):
+            return self._redirect_to_ad_conversations(ad_instance.id)
+
+        conversation_instance = self._get_or_create_conversation(ad_instance, owner_user, buyer_user)
+        return self._redirect_to_conversation_detail(conversation_instance.pk)
+
+    def _get_active_ad_or_404(self, ad_id):
+        return get_object_or_404(Ad, pk=ad_id, is_active=True)
+
+    def _is_owner_starting_conversation(self, owner_user, buyer_user):
+        return owner_user == buyer_user
+
+    def _redirect_to_ad_conversations(self, ad_id):
+        return redirect('conversation_list_for_ad', ad_id=ad_id)
+
+    def _get_or_create_conversation(self, ad_instance, owner_user, buyer_user):
+        conversation, _ = Conversation.objects.get_or_create(
+            ad=ad_instance,
+            owner=owner_user,
+            buyer=buyer_user
+        )
+        return conversation
+
+    def _redirect_to_conversation_detail(self, conversation_id):
+        return redirect('conversation_detail', conversation_id=conversation_id)
+
+class ConversationListView(LoginRequiredMixin, ListView):
+    model = Conversation
+    template_name = 'conversations/list.html'
+    context_object_name = 'conversations'
+
+    def get_queryset(self):
+        current_user = self.request.user
+        return self._get_user_conversations(current_user)
+
+    def _get_user_conversations(self, user):
+        return (
+            Conversation.objects
+            .filter(self._get_user_filter(user))
+            .select_related('ad', 'buyer', 'ad__user')
+            .annotate(other_username=self._get_other_username_annotation(user))
+            .order_by('-created_at')
+        )
+
+    def _get_user_filter(self, user):
+        return Q(ad__user=user) | Q(buyer=user)
+
+    def _get_other_username_annotation(self, user):
+        return Case(
+            When(ad__user=user, then=F('buyer__username')),
+            default=F('ad__user__username'),
+        )
+
+class ConversationDetailView(LoginRequiredMixin, DetailView):
+    model = Conversation
+    template_name = 'conversations/detail.html'
+    context_object_name = 'conversation'
+    pk_url_kwarg = 'conversation_id'
+
+    def dispatch(self, request, *args, **kwargs):
+        conversation = self.get_object()
+        if request.user not in (conversation.owner, conversation.buyer):
+            return HttpResponseForbidden("You don't have access to this conversation.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        conversation = self.object
+        context['messages'] = conversation.messages.select_related('sender').all()
+        context['form'] = MessageForm()
+        context["other_user"] = conversation.other_user(self.request.user)
+        return context
+
+
+class SendMessageView(LoginRequiredMixin, View):
+    def post(self, request, conversation_id, *args, **kwargs):
+        conversation_instance = self._get_conversation_or_forbidden(conversation_id, request.user)
+        if isinstance(conversation_instance, JsonResponse):
+            return conversation_instance
+
+        message_form = MessageForm(request.POST)
+
+        if message_form.is_valid():
+            message_instance = self._create_message(message_form, conversation_instance, request.user)
+            return self._build_success_response(message_instance)
+
+        return self._build_error_response(message_form)
+
+    def _get_conversation_or_forbidden(self, conversation_id, user):
+        conversation_instance = get_object_or_404(Conversation, pk=conversation_id)
+        if user not in (conversation_instance.owner, conversation_instance.buyer):
+            return JsonResponse({'error': 'forbidden'}, status=403)
+        return conversation_instance
+
+    def _create_message(self, message_form, conversation_instance, sender):
+        message_instance = message_form.save(commit=False)
+        message_instance.conversation = conversation_instance
+        message_instance.sender = sender
+        message_instance.sent_at = timezone.now()
+        message_instance.save()
+        return message_instance
+
+    def _build_success_response(self, message_instance):
+        return JsonResponse({
+            'id': message_instance.pk,
+            'sender': message_instance.sender.username,
+            'content': message_instance.content,
+            'sent_at': message_instance.sent_at.isoformat(),
+        })
+
+    def _build_error_response(self, message_form):
+        return JsonResponse({'errors': message_form.errors}, status=400)
+
+class ConversationMessagesJSONView(LoginRequiredMixin, View):
+    def get(self, request, conversation_id, *args, **kwargs):
+        conversation = self._get_conversation_or_forbidden(conversation_id, request.user)
+        if isinstance(conversation, JsonResponse):
+            return conversation
+
+        messages_queryset = self._get_messages_queryset(conversation, request.GET.get('after'))
+        serialized_messages = self._serialize_messages(messages_queryset)
+
+        return JsonResponse({'messages': serialized_messages})
+
+    def _get_conversation_or_forbidden(self, conversation_id, user):
+        conversation = get_object_or_404(Conversation, pk=conversation_id)
+        if user not in (conversation.owner, conversation.buyer):
+            return JsonResponse({'error': 'forbidden'}, status=403)
+        return conversation
+
+    def _get_messages_queryset(self, conversation, after_param):
+        messages_queryset = conversation.messages.select_related('sender').all()
+        if after_param:
+            after_datetime = parse_datetime(after_param)
+            if after_datetime:
+                messages_queryset = messages_queryset.filter(sent_at__gt=after_datetime)
+        return messages_queryset
+
+    def _serialize_messages(self, messages_queryset):
+        return [
+            {
+                'id': message.pk,
+                'sender': message.sender.username,
+                'sender_id': message.sender_id,
+                'content': message.content,
+                'sent_at': message.sent_at.isoformat(),
+                'read': message.read
+            }
+            for message in messages_queryset
+        ]
+
+class AdConversationListView(LoginRequiredMixin, ListView):
+    model = Conversation
+    template_name = 'conversations/ad_conversations.html'
+    context_object_name = 'conversations'
+
+    def get_queryset(self):
+        ad_id = self.kwargs['ad_id']
+        self.ad = get_object_or_404(Ad, pk=ad_id)
+        if self.ad.user != self.request.user:
+            return Conversation.objects.none()  # or raise 403
+        return self.ad.conversations.select_related('buyer').all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['ad'] = self.ad
+        return context

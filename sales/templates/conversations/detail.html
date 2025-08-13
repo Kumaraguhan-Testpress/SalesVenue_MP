@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="container">
+  <h3>Conversation about: <a href="{{ conversation.ad.get_absolute_url }}">{{ conversation.ad.title }}</a></h3>
+  <p>
+    You: {{ request.user.username }} |
+    Other: {{ other_user.username }}
+  </p>
+
+  <div id="messages" style="border:1px solid #ddd; padding:10px; max-height:400px; overflow:auto;">
+    {% for m in messages %}
+  <div class="message {% if m.sender == request.user %}me{% else %}them{% endif %}"
+      data-id="{{ m.pk }}"
+      data-sent-at="{{ m.sent_at|date:'c' }}">
+   <small><strong>{{ m.sender.username }}</strong> <em>{{ m.sent_at|date:"M d, Y H:i" }}</em></small>
+   <div>{{ m.content|linebreaksbr }}</div>
+   </div>
+  <hr />
+{% empty %}
+<p>No messages yet. Start the conversation!</p>
+{% endfor %}
+  </div>
+
+  <form id="message-form" method="post" action="{% url 'send_message' conversation.pk %}">
+    {% csrf_token %}
+    <div class="form-group">
+        {{ form.content.errors }}
+        {{ form.content|add_class:"form-control"|attr:"rows:2"|attr:"placeholder:Write your message..." }}
+    </div>
+    <button id="send-btn" class="btn btn-primary" type="submit">Send</button>
+  </form>
+</div>
+
+{% include "conversations/scripts/conversations_script.html" %}
+
+{% endblock %}

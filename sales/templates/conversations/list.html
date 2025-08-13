@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Your Conversations</h2>
+<ul>
+  {% for conv in conversations %}
+    <li>
+        <a href="{% url 'conversation_detail' conv.pk %}">
+            {{ conv.ad.title }} — Other: {{ conv.other_username }} — {{ conv.created_at|date:"M d, Y H:i" }}
+        </a>
+    </li>
+    {% empty %}
+        <li>No conversations yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}
