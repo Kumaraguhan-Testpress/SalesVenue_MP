@@ -35,13 +35,11 @@ class DashboardViewTests(TestCase):
         )
 
     def test_dashboard_redirects_if_not_logged_in(self):
-        """Anonymous users should be redirected to login."""
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login", response.url)
 
     def test_dashboard_renders_for_logged_in_user(self):
-        """Logged-in users should see the dashboard."""
         self.client.login(username="testuser", password="pass1234")
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
@@ -50,13 +48,11 @@ class DashboardViewTests(TestCase):
         self.assertContains(response, self.user.username)
 
     def test_contact_info_visibility_enabled(self):
-        """Badge should show Enabled if contact_info_visibility is True."""
         self.client.login(username="testuser", password="pass1234")
         response = self.client.get(reverse("dashboard"))
         self.assertContains(response, '<span class="badge bg-success">Enabled</span>', html=True)
 
     def test_contact_info_visibility_disabled(self):
-        """Badge should show Disabled if contact_info_visibility is False."""
         self.user.contact_info_visibility = False
         self.user.save()
         self.client.login(username="testuser", password="pass1234")
@@ -64,15 +60,12 @@ class DashboardViewTests(TestCase):
         self.assertContains(response, '<span class="badge bg-secondary">Disabled</span>', html=True)
 
     def test_conversations_listed(self):
-        """Dashboard should display conversation titles."""
         self.client.login(username="testuser", password="pass1234")
         response = self.client.get(reverse("dashboard"))
         self.assertContains(response, self.conversation.ad.title)
 
     def test_no_conversations_message(self):
-        """If no conversations exist, show placeholder."""
         Conversation.objects.all().delete()
         self.client.login(username="testuser", password="pass1234")
         response = self.client.get(reverse("dashboard"))
         self.assertContains(response, "No conversations yet.")
-

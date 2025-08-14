@@ -356,7 +356,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_user(self):
         return self.request.user
 
-    def get_user_conversations(self, user):
+    def _get_user_conversations(self, user):
         return (
             Conversation.objects.filter(
                 Q(owner=user) | Q(buyer=user)
