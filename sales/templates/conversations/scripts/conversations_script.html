@@ -21,8 +21,10 @@
     const header = document.createElement('small');
     const strong = document.createElement('strong');
     strong.textContent = m.sender;
+
     const em = document.createElement('em');
     em.textContent = ' ' + (new Date(m.sent_at)).toLocaleString();
+
     header.appendChild(strong);
     header.appendChild(em);
 
