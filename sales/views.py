@@ -184,6 +184,7 @@ class ConversationDetailView(LoginRequiredMixin, DetailView):
         context["other_user"] = conversation.other_user(self.request.user)
         return context
 
+
 class SendMessageView(LoginRequiredMixin, View):
     def post(self, request, conversation_id, *args, **kwargs):
         conversation = self._get_conversation_or_forbidden(conversation_id, request.user)
