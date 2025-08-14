@@ -356,6 +356,15 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_user(self):
         return self.request.user
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.get_user()
+        conversations = self._get_user_conversations(user)
+
+        context["user_obj"] = user
+        context["conversations"] = conversations
+        return context
+
     def _get_user_conversations(self, user):
         return (
             Conversation.objects.filter(
@@ -370,12 +379,3 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             )
             .order_by("-created_at")
         )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.get_user()
-        conversations = self.get_user_conversations(user)
-
-        context["user_obj"] = user
-        context["conversations"] = conversations
-        return context
