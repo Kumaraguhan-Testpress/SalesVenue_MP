@@ -4,7 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from sales.views import (
     StartConversationView, ConversationListView, ConversationDetailView,
-    SendMessageView, ConversationMessagesJSONView, AdConversationListView
+    SendMessageView, ConversationMessagesJSONView, AdConversationListView,
+    UpdateMessageView, DeleteMessageView
 )
 
 urlpatterns = [
@@ -17,6 +18,9 @@ urlpatterns = [
     path('conversations/<int:conversation_id>/send/', SendMessageView.as_view(), name='send_message'),
     path('conversations/<int:conversation_id>/messages_json/', ConversationMessagesJSONView.as_view(), name='conversation_messages_json'),
     path('ads/<int:ad_id>/conversations/', AdConversationListView.as_view(), name='conversation_list_for_ad'),
+    path('messages/<int:message_id>/update/', UpdateMessageView.as_view(), name='update_message'),
+    path('messages/<int:message_id>/delete/', DeleteMessageView.as_view(), name='delete_message'),
+
 ]
 
 if settings.DEBUG:

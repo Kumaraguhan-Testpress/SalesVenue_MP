@@ -10,6 +10,8 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.db.models import Q, Case, When, F
 from django.utils.dateparse import parse_datetime
+from django.views.decorators.http import require_http_methods
+from django.utils.decorators import method_decorator
 
 class AdListView(ListView):
     model = Ad
@@ -221,24 +223,40 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
         if isinstance(conversation, JsonResponse):
             return conversation
 
-        messages_queryset = self._get_messages_queryset(conversation, request.GET.get('after'))
-        serialized_messages = self._serialize_messages(messages_queryset)
+        after_param = request.GET.get('after')
+        all_messages_queryset = self._get_all_messages(conversation)
+        updated_or_new_messages_queryset = self._get_updated_or_new_messages(conversation, after_param)
 
-        return JsonResponse({'messages': serialized_messages})
+        all_message_ids = self._get_message_ids(all_messages_queryset)
+        serialized_messages = self._serialize_messages(updated_or_new_messages_queryset)
 
-    def _get_conversation_or_forbidden(self, conversation_id, user):
+        return JsonResponse({
+            'messages': serialized_messages,
+            'all_ids': all_message_ids
+        })
+
+    def _get_conversation_or_forbidden(self, conversation_id, current_user):
         conversation = get_object_or_404(Conversation, pk=conversation_id)
-        if user not in (conversation.owner, conversation.buyer):
+        if current_user not in (conversation.owner, conversation.buyer):
             return JsonResponse({'error': 'forbidden'}, status=403)
         return conversation
 
-    def _get_messages_queryset(self, conversation, after_param):
+    def _get_all_messages(self, conversation):
+        return conversation.messages.select_related('sender').all().order_by('sent_at')
+
+    def _get_updated_or_new_messages(self, conversation, after_param):
         messages_queryset = conversation.messages.select_related('sender').all()
-        if after_param:
-            after_datetime = parse_datetime(after_param)
-            if after_datetime:
-                messages_queryset = messages_queryset.filter(sent_at__gt=after_datetime)
-        return messages_queryset
+        if not after_param:
+            return messages_queryset
+        after_datetime = parse_datetime(after_param)
+        if after_datetime:
+            return messages_queryset.filter(
+                Q(sent_at__gt=after_datetime) | Q(updated_at__gt=after_datetime)
+            )
+        return messages_queryset.none()
+
+    def _get_message_ids(self, messages_queryset):
+        return list(messages_queryset.values_list('pk', flat=True))
 
     def _serialize_messages(self, messages_queryset):
         return [
@@ -248,6 +266,7 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
                 'sender_id': message.sender_id,
                 'content': message.content,
                 'sent_at': message.sent_at.isoformat(),
+                'updated_at': message.updated_at.isoformat() if message.updated_at else None,
                 'read': message.read
             }
             for message in messages_queryset
@@ -269,3 +288,63 @@ class AdConversationListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['ad'] = self.ad
         return context
+
+@method_decorator(require_http_methods(["POST"]), name='dispatch')
+class UpdateMessageView(LoginRequiredMixin, View):
+    def post(self, request, message_id, *args, **kwargs):
+        message = self._get_message_or_forbidden(message_id, request.user)
+        if isinstance(message, JsonResponse):
+            return message
+
+        new_content = self._get_validated_content(request)
+        if isinstance(new_content, JsonResponse):
+            return new_content
+
+        self._update_message_content(message, new_content)
+        return self._build_success_response(message)
+
+    def _get_message_or_forbidden(self, message_id, current_user):
+        message = get_object_or_404(Message, pk=message_id)
+        if message.sender != current_user:
+            return JsonResponse({'error': 'forbidden'}, status=403)
+        return message
+
+    def _get_validated_content(self, request):
+        content = request.POST.get('content', '').strip()
+        if not content:
+            return JsonResponse({'error': 'Content cannot be empty.'}, status=400)
+        return content
+
+    def _update_message_content(self, message, new_content):
+        message.content = new_content
+        message.save()
+
+    def _build_success_response(self, message):
+        return JsonResponse({
+            'id': message.pk,
+            'content': message.content,
+            'sent_at': message.sent_at.isoformat(),
+            'updated_at': message.updated_at.isoformat(),
+        })
+
+@method_decorator(require_http_methods(["POST"]), name='dispatch')
+class DeleteMessageView(LoginRequiredMixin, View):
+    def post(self, request, message_id, *args, **kwargs):
+        message = self._get_message_or_forbidden(message_id, request.user)
+        if isinstance(message, JsonResponse):
+            return message
+
+        self._delete_message(message)
+        return self._build_success_response(message_id)
+
+    def _get_message_or_forbidden(self, message_id, current_user):
+        message = get_object_or_404(Message, pk=message_id)
+        if message.sender != current_user:
+            return JsonResponse({'error': 'forbidden'}, status=403)
+        return message
+
+    def _delete_message(self, message):
+        message.delete()
+
+    def _build_success_response(self, message_id):
+        return JsonResponse({'success': True, 'id': message_id})
