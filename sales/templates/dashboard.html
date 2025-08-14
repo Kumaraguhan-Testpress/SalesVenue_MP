@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">User Dashboard</h2>
+
+    <div class="card mb-4">
+        <div class="card-body d-flex align-items-center">
+            {% if user_obj.profile_picture %}
+                <img src="{{ user_obj.profile_picture.url }}" class="rounded-circle me-3" width="80" height="80">
+            {% else %}
+                <img src="{% static 'images/default_avatar.jpg' %}" class="rounded-circle me-3" width="80" height="80">
+            {% endif %}
+            <div>
+                <h5 class="card-title">{{ user_obj.username }}</h5>
+                <p class="mb-1">Email: {{ user_obj.email }}</p>
+                <p class="mb-1">Phone: {{ user_obj.phone_number|default:"Not provided" }}</p>
+                <p class="mb-1">
+                    Contact Info Visibility:
+                    {% if user_obj.contact_info_visibility %}
+                        <span class="badge bg-success">Enabled</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Disabled</span>
+                    {% endif %}
+                </p>
+                <a href="{% url 'profile' %}" class="btn btn-primary mt-2">Update Profile</a>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        {% include "conversations/list.html" %}
+    </div>
+</div>
+{% endblock %}
