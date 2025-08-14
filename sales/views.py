@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import View, ListView, DetailView, CreateView, UpdateView, DeleteView
-from .models import Ad, Conversation, Message
+from .models import Ad, Conversation, Message, Category
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -9,7 +9,7 @@ from .mixins import AdOwnerRequiredMixin
 from django.http import JsonResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.db.models import Q, Case, When, F
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_datetime, parse_date
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
@@ -18,20 +18,52 @@ class AdListView(ListView):
     model = Ad
     template_name = 'ad_list_view.html'
     context_object_name = 'ads'
-    
     paginate_by = 10
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            # If not authenticated, render a different template with a welcome message
             return render(request, 'welcome.html')
-
         return super().dispatch(request, *args, **kwargs)
-    
+
     def get_queryset(self):
-        return Ad.objects.filter(is_active=True).select_related('user', 'category') \
-                                                .prefetch_related('images') \
-                                                .order_by('-created_at')
+        qs = Ad.objects.filter(is_active=True) \
+                       .select_related('user', 'category') \
+                       .prefetch_related('images') \
+                       .order_by('-created_at')
+
+        # Get filter params
+        category_id = self.request.GET.get('category')
+        location = self.request.GET.get('location')
+        min_price = self.request.GET.get('min_price')
+        max_price = self.request.GET.get('max_price')
+        event_date_str = self.request.GET.get('event_date')
+
+        # Apply filters
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+
+        if location:
+            qs = qs.filter(location__icontains=location)
+
+        if min_price:
+            qs = qs.filter(price__gte=min_price)
+
+        if max_price:
+            qs = qs.filter(price__lte=max_price)
+
+        if event_date_str:
+            event_date = parse_date(event_date_str)
+            if event_date:
+                qs = qs.filter(event_date=event_date)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        # Preserve filters in pagination links
+        context['current_filters'] = self.request.GET.urlencode()
+        return context
 
 class AdDetailView(LoginRequiredMixin ,DetailView):
     model = Ad
