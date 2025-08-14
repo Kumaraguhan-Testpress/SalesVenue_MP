@@ -353,19 +353,29 @@ class DeleteMessageView(LoginRequiredMixin, View):
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "dashboard.html"
 
+    def get_user(self):
+        return self.request.user
+
+    def get_user_conversations(self, user):
+        return (
+            Conversation.objects.filter(
+                Q(owner=user) | Q(buyer=user)
+            )
+            .select_related("ad", "owner", "buyer")
+            .annotate(
+                other_username=Case(
+                    When(owner=user, then=F("buyer__username")),
+                    default=F("owner__username")
+                )
+            )
+            .order_by("-created_at")
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.request.user
+        user = self.get_user()
+        conversations = self.get_user_conversations(user)
 
-        conversations = Conversation.objects.filter(
-            Q(owner=user) | Q(buyer=user)
-        ).select_related('ad', 'owner', 'buyer').annotate(
-            other_username=Case(
-                When(owner=user, then=F('buyer__username')),
-                default=F('owner__username')
-            )
-        ).order_by('-created_at')
-        
         context["user_obj"] = user
         context["conversations"] = conversations
         return context
