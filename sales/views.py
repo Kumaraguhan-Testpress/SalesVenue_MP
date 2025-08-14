@@ -98,15 +98,15 @@ class AdDeleteView(LoginRequiredMixin, AdOwnerRequiredMixin, DeleteView):
 
 class StartConversationView(LoginRequiredMixin, View):
     def get(self, request, ad_id, *args, **kwargs):
-        ad_instance = self._get_active_ad_or_404(ad_id)
-        owner_user = ad_instance.user
+        ad = self._get_active_ad_or_404(ad_id)
+        owner_user = ad.user
         buyer_user = request.user
 
         if self._is_owner_starting_conversation(owner_user, buyer_user):
-            return self._redirect_to_ad_conversations(ad_instance.id)
+            return self._redirect_to_ad_conversations(ad.id)
 
-        conversation_instance = self._get_or_create_conversation(ad_instance, owner_user, buyer_user)
-        return self._redirect_to_conversation_detail(conversation_instance.pk)
+        conversation = self._get_or_create_conversation(ad, owner_user, buyer_user)
+        return self._redirect_to_conversation_detail(conversation.pk)
 
     def _get_active_ad_or_404(self, ad_id):
         return get_object_or_404(Ad, pk=ad_id, is_active=True)
@@ -117,9 +117,9 @@ class StartConversationView(LoginRequiredMixin, View):
     def _redirect_to_ad_conversations(self, ad_id):
         return redirect('conversation_list_for_ad', ad_id=ad_id)
 
-    def _get_or_create_conversation(self, ad_instance, owner_user, buyer_user):
+    def _get_or_create_conversation(self, ad, owner_user, buyer_user):
         conversation, _ = Conversation.objects.get_or_create(
-            ad=ad_instance,
+            ad=ad,
             owner=owner_user,
             buyer=buyer_user
         )
@@ -178,38 +178,38 @@ class ConversationDetailView(LoginRequiredMixin, DetailView):
 
 class SendMessageView(LoginRequiredMixin, View):
     def post(self, request, conversation_id, *args, **kwargs):
-        conversation_instance = self._get_conversation_or_forbidden(conversation_id, request.user)
-        if isinstance(conversation_instance, JsonResponse):
-            return conversation_instance
+        conversation = self._get_conversation_or_forbidden(conversation_id, request.user)
+        if isinstance(conversation, JsonResponse):
+            return conversation
 
         message_form = MessageForm(request.POST)
 
         if message_form.is_valid():
-            message_instance = self._create_message(message_form, conversation_instance, request.user)
-            return self._build_success_response(message_instance)
+            message = self._create_message(message_form, conversation, request.user)
+            return self._build_success_response(message)
 
         return self._build_error_response(message_form)
 
     def _get_conversation_or_forbidden(self, conversation_id, user):
-        conversation_instance = get_object_or_404(Conversation, pk=conversation_id)
-        if user not in (conversation_instance.owner, conversation_instance.buyer):
+        conversation = get_object_or_404(Conversation, pk=conversation_id)
+        if user not in (conversation.owner, conversation.buyer):
             return JsonResponse({'error': 'forbidden'}, status=403)
-        return conversation_instance
+        return conversation
 
-    def _create_message(self, message_form, conversation_instance, sender):
-        message_instance = message_form.save(commit=False)
-        message_instance.conversation = conversation_instance
-        message_instance.sender = sender
-        message_instance.sent_at = timezone.now()
-        message_instance.save()
-        return message_instance
+    def _create_message(self, message_form, conversation, sender):
+        message = message_form.save(commit=False)
+        message.conversation = conversation
+        message.sender = sender
+        message.sent_at = timezone.now()
+        message.save()
+        return message
 
-    def _build_success_response(self, message_instance):
+    def _build_success_response(self, message):
         return JsonResponse({
-            'id': message_instance.pk,
-            'sender': message_instance.sender.username,
-            'content': message_instance.content,
-            'sent_at': message_instance.sent_at.isoformat(),
+            'id': message.pk,
+            'sender': message.sender.username,
+            'content': message.content,
+            'sent_at': message.sent_at.isoformat(),
         })
 
     def _build_error_response(self, message_form):
