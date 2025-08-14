@@ -26,42 +26,43 @@ class AdListView(ListView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        qs = Ad.objects.filter(is_active=True) \
+        ads_queryset = Ad.objects.filter(is_active=True) \
                        .select_related('user', 'category') \
                        .prefetch_related('images') \
                        .order_by('-created_at')
 
-        # Get filter params
+        search_keyword = self.request.GET.get('q')  # search keyword
         category_id = self.request.GET.get('category')
         location = self.request.GET.get('location')
-        min_price = self.request.GET.get('min_price')
-        max_price = self.request.GET.get('max_price')
-        event_date_str = self.request.GET.get('event_date')
+        minimum_price = self.request.GET.get('min_price')
+        maximum_price = self.request.GET.get('max_price')
+        event_date_input = self.request.GET.get('event_date')
 
-        # Apply filters
+        if search_keyword:
+            ads_queryset = ads_queryset.filter(Q(title__icontains=search_keyword) | Q(description__icontains=search_keyword))
+
         if category_id:
-            qs = qs.filter(category_id=category_id)
+            ads_queryset = ads_queryset.filter(category_id=category_id)
 
         if location:
-            qs = qs.filter(location__icontains=location)
+            ads_queryset = ads_queryset.filter(location__icontains=location)
 
-        if min_price:
-            qs = qs.filter(price__gte=min_price)
+        if minimum_price:
+            ads_queryset = ads_queryset.filter(price__gte=minimum_price)
 
-        if max_price:
-            qs = qs.filter(price__lte=max_price)
+        if maximum_price:
+            ads_queryset = ads_queryset.filter(price__lte=maximum_price)
 
-        if event_date_str:
-            event_date = parse_date(event_date_str)
+        if event_date_input:
+            event_date = parse_date(event_date_input)
             if event_date:
-                qs = qs.filter(event_date=event_date)
+                ads_queryset = ads_queryset.filter(event_date=event_date)
 
-        return qs
+        return ads_queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['categories'] = Category.objects.all()
-        # Preserve filters in pagination links
         context['current_filters'] = self.request.GET.urlencode()
         return context
 

@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
 
+    <form method="get" action="{% url 'ad_list' %}" class="search-form">
+        <input type="text" 
+            name="q" 
+            value="{{ request.GET.q }}" 
+            placeholder="Search ads by title or description..." 
+            class="search-input">
+
+        <button type="submit" class="btn-search">
+            Search
+        </button>
+
+        <a href="{% url 'ad_list' %}" class="btn-cancel">
+            Cancel
+        </a>
+    </form>
+
     <form method="get" class="filter-form">
         <div class="form-group">
             <label>Category:</label>
@@ -77,7 +93,7 @@
             <ul class="pagination-list">
                 {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.previous_page_number }}">Previous</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled">
@@ -93,7 +109,7 @@
 
                 {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.next_page_number }}">Next</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled">
