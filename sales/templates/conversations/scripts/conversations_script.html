@@ -18,7 +18,6 @@
     div.dataset.id = m.id;
     div.dataset.sentAt = m.sent_at;
 
-    // header
     const header = document.createElement('small');
     const strong = document.createElement('strong');
     strong.textContent = m.sender;
@@ -62,8 +61,7 @@ body.appendChild(document.createTextNode(line));
 }
 
 
-  // In your script tag, replace the old poll function with this one
-async function poll() {
+  async function poll() {
     let url = `{% url 'conversation_messages_json' conversation.pk %}`;
     if (lastTimestamp) {
       url += '?after=' + encodeURIComponent(lastTimestamp);
