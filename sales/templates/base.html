@@ -17,6 +17,9 @@
                 <div class="d-flex align-items-center">
                     {% if user.is_authenticated %}
                         <span class="welcome-text">Welcome, {{ user.username }}</span>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-light ms-3">
+                            Dashboard
+                        </a>
                         <div>
                             <form method="post" action="{% url 'logout' %}" class="d-inline">
                                 {% csrf_token %}
