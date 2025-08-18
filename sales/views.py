@@ -20,7 +20,7 @@ class AdListView(ListView):
     context_object_name = 'ads'
 
     paginate_by = 10
-
+    
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return render(request, 'welcome.html')
