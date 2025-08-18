@@ -276,10 +276,6 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
             'messages': serialized_messages,
             'all_ids': all_message_ids
         })
-        return JsonResponse({
-            'messages': serialized_messages,
-            'all_ids': all_message_ids
-        })
 
     def _get_conversation_or_forbidden(self, conversation_id, current_user):
         conversation = get_object_or_404(Conversation, pk=conversation_id)
@@ -312,7 +308,6 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
                 'sender_id': message.sender_id,
                 'content': message.content,
                 'sent_at': message.sent_at.isoformat(),
-                'updated_at': message.updated_at.isoformat() if message.updated_at else None,
                 'updated_at': message.updated_at.isoformat() if message.updated_at else None,
                 'read': message.read
             }
@@ -399,19 +394,32 @@ class DeleteMessageView(LoginRequiredMixin, View):
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "dashboard.html"
 
+    def get_user(self):
+        return self.request.user
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.request.user
+        user = self.get_user()
+        conversations = self._get_user_conversations(user)
 
-        conversations = (Conversation.objects.filter(owner=user) | Conversation.objects.filter(buyer=user)) \
-            .select_related('ad', 'owner', 'buyer') \
-            .prefetch_related('messages')
-
-        # Add "other_username" and "has_unread" attributes for the template
         for conv in conversations:
-            conv.other_username = conv.other_user(user).username
             conv.has_unread = conv.has_unread_messages_for(user)
 
         context["user_obj"] = user
         context["conversations"] = conversations
         return context
+
+    def _get_user_conversations(self, user):
+        return (
+            Conversation.objects.filter(
+                Q(owner=user) | Q(buyer=user)
+            )
+            .select_related("ad", "owner", "buyer")
+            .annotate(
+                other_username=Case(
+                    When(owner=user, then=F("buyer__username")),
+                    default=F("owner__username")
+                )
+            )
+            .order_by("-created_at")
+        )
