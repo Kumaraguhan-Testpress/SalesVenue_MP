@@ -111,3 +111,8 @@ class AdListViewTests(TestCase):
         })
         self.assertEqual(len(response.context['ads']), 1)
         self.assertIn(self.ad1, response.context['ads'])
+
+    def test_search_does_not_include_inactive_ads(self):
+        response = self.client.get(reverse('ad_list'), {'q': 'Furniture'})
+        self.assertEqual(len(response.context['ads']), 0)
+        self.assertNotIn(self.ad4, response.context['ads'])

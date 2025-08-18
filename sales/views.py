@@ -20,13 +20,13 @@ class AdListView(ListView):
     context_object_name = 'ads'
     
     paginate_by = 10
-    
+
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return render(request, 'welcome.html')
 
         return super().dispatch(request, *args, **kwargs)
-
+    
     def get_queryset(self):
         ads_queryset = Ad.objects.filter(is_active=True) \
                        .select_related('user', 'category') \
