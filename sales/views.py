@@ -413,7 +413,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Add "other_username" and "has_unread" attributes for the template
         for conv in conversations:
             conv.other_username = conv.other_user(user).username
-            conv.has_unread = conv.has_unread_for(user)
+            conv.has_unread = conv.has_unread_messages_for(user)
 
         context["user_obj"] = user
         context["conversations"] = conversations
