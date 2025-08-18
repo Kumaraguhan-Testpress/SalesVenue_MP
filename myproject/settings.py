@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'accounts',
     'sales',
     'widget_tweaks',
+    "django_filters"
 ]
 
 MIDDLEWARE = [
