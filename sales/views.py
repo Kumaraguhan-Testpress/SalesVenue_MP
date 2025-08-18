@@ -18,7 +18,7 @@ class AdListView(ListView):
     model = Ad
     template_name = 'ad_list_view.html'
     context_object_name = 'ads'
-
+    
     paginate_by = 10
     
     def dispatch(self, request, *args, **kwargs):
