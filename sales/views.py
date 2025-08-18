@@ -368,7 +368,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         conversations = self._get_user_conversations(user)
 
         for conv in conversations:
-            conv.has_unread = conv.has_unread_for(user)
+            conv.has_unread = conv.has_unread_messages_for(user)
 
         context["user_obj"] = user
         context["conversations"] = conversations

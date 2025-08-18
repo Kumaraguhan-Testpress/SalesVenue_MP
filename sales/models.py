@@ -108,7 +108,7 @@ class Conversation(models.Model):
             self.owner = self.ad.user
         super().save(*args, **kwargs)
 
-    def has_unread_for(self, user):
+    def has_unread_messages_for(self, user):
         return self.messages.filter(read=False).exclude(sender=user).exists()
 
 class Message(models.Model):
