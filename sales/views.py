@@ -13,11 +13,14 @@ from django.utils.dateparse import parse_datetime, parse_date
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
+from django_filters.views import FilterView
+from .filters import AdFilter
 
-class AdListView(ListView):
+class AdListView(FilterView):
     model = Ad
     template_name = 'ad_list_view.html'
     context_object_name = 'ads'
+    filterset_class = AdFilter
     
     paginate_by = 10
 
@@ -28,38 +31,10 @@ class AdListView(ListView):
         return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
-        ads_queryset = Ad.objects.filter(is_active=True) \
+        ads_queryset = super().get_queryset().filter(is_active=True) \
                        .select_related('user', 'category') \
                        .prefetch_related('images') \
                        .order_by('-created_at')
-
-        search_keyword = self.request.GET.get('q')  # search keyword
-        category_id = self.request.GET.get('category')
-        location = self.request.GET.get('location')
-        minimum_price = self.request.GET.get('min_price')
-        maximum_price = self.request.GET.get('max_price')
-        event_date_input = self.request.GET.get('event_date')
-
-        if search_keyword:
-            ads_queryset = ads_queryset.filter(Q(title__icontains=search_keyword) | Q(description__icontains=search_keyword))
-
-        if category_id:
-            ads_queryset = ads_queryset.filter(category_id=category_id)
-
-        if location:
-            ads_queryset = ads_queryset.filter(location__icontains=location)
-
-        if minimum_price:
-            ads_queryset = ads_queryset.filter(price__gte=minimum_price)
-
-        if maximum_price:
-            ads_queryset = ads_queryset.filter(price__lte=maximum_price)
-
-        if event_date_input:
-            event_date = parse_date(event_date_input)
-            if event_date:
-                ads_queryset = ads_queryset.filter(event_date=event_date)
-
         return ads_queryset
 
     def get_context_data(self, **kwargs):
