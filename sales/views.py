@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import View, ListView, DetailView, CreateView, UpdateView, DeleteView
-from .models import Ad, Conversation, Message
+from .models import Ad, Conversation, Message, Category
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -9,7 +9,7 @@ from .mixins import AdOwnerRequiredMixin
 from django.http import JsonResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.db.models import Q, Case, When, F
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_datetime, parse_date
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
@@ -18,20 +18,53 @@ class AdListView(ListView):
     model = Ad
     template_name = 'ad_list_view.html'
     context_object_name = 'ads'
-    
     paginate_by = 10
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            # If not authenticated, render a different template with a welcome message
             return render(request, 'welcome.html')
-
         return super().dispatch(request, *args, **kwargs)
-    
+
     def get_queryset(self):
-        return Ad.objects.filter(is_active=True).select_related('user', 'category') \
-                                                .prefetch_related('images') \
-                                                .order_by('-created_at')
+        ads_queryset = Ad.objects.filter(is_active=True) \
+                       .select_related('user', 'category') \
+                       .prefetch_related('images') \
+                       .order_by('-created_at')
+
+        search_keyword = self.request.GET.get('q')  # search keyword
+        category_id = self.request.GET.get('category')
+        location = self.request.GET.get('location')
+        minimum_price = self.request.GET.get('min_price')
+        maximum_price = self.request.GET.get('max_price')
+        event_date_input = self.request.GET.get('event_date')
+
+        if search_keyword:
+            ads_queryset = ads_queryset.filter(Q(title__icontains=search_keyword) | Q(description__icontains=search_keyword))
+
+        if category_id:
+            ads_queryset = ads_queryset.filter(category_id=category_id)
+
+        if location:
+            ads_queryset = ads_queryset.filter(location__icontains=location)
+
+        if minimum_price:
+            ads_queryset = ads_queryset.filter(price__gte=minimum_price)
+
+        if maximum_price:
+            ads_queryset = ads_queryset.filter(price__lte=maximum_price)
+
+        if event_date_input:
+            event_date = parse_date(event_date_input)
+            if event_date:
+                ads_queryset = ads_queryset.filter(event_date=event_date)
+
+        return ads_queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        context['current_filters'] = self.request.GET.urlencode()
+        return context
 
 class AdDetailView(LoginRequiredMixin ,DetailView):
     model = Ad
@@ -174,6 +207,12 @@ class ConversationDetailView(LoginRequiredMixin, DetailView):
             read=False
         ).exclude(sender=request.user).update(read=True)
 
+
+        Message.objects.filter(
+            conversation=conversation,
+            read=False
+        ).exclude(sender=request.user).update(read=True)
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -183,7 +222,6 @@ class ConversationDetailView(LoginRequiredMixin, DetailView):
         context['form'] = MessageForm()
         context["other_user"] = conversation.other_user(self.request.user)
         return context
-
 
 class SendMessageView(LoginRequiredMixin, View):
     def post(self, request, conversation_id, *args, **kwargs):
@@ -226,13 +264,13 @@ class SendMessageView(LoginRequiredMixin, View):
 
 class ConversationMessagesJSONView(LoginRequiredMixin, View):
     def get(self, request, conversation_id, *args, **kwargs):
-        conversation = self._get_conversation_or_forbidden(conversation_id, request.user)
-        if isinstance(conversation, JsonResponse):
-            return conversation
+        conversation_instance = self._get_conversation_or_forbidden(conversation_id, request.user)
+        if isinstance(conversation_instance, JsonResponse):
+            return conversation_instance
 
         after_param = request.GET.get('after')
-        all_messages_queryset = self._get_all_messages(conversation)
-        updated_or_new_messages_queryset = self._get_updated_or_new_messages(conversation, after_param)
+        all_messages_queryset = self._get_all_messages(conversation_instance)
+        updated_or_new_messages_queryset = self._get_updated_or_new_messages(conversation_instance, after_param)
 
         all_message_ids = self._get_message_ids(all_messages_queryset)
         serialized_messages = self._serialize_messages(updated_or_new_messages_queryset)
@@ -241,18 +279,22 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
             'messages': serialized_messages,
             'all_ids': all_message_ids
         })
+        return JsonResponse({
+            'messages': serialized_messages,
+            'all_ids': all_message_ids
+        })
 
     def _get_conversation_or_forbidden(self, conversation_id, current_user):
-        conversation = get_object_or_404(Conversation, pk=conversation_id)
-        if current_user not in (conversation.owner, conversation.buyer):
+        conversation_instance = get_object_or_404(Conversation, pk=conversation_id)
+        if current_user not in (conversation_instance.owner, conversation_instance.buyer):
             return JsonResponse({'error': 'forbidden'}, status=403)
-        return conversation
+        return conversation_instance
 
-    def _get_all_messages(self, conversation):
-        return conversation.messages.select_related('sender').all().order_by('sent_at')
+    def _get_all_messages(self, conversation_instance):
+        return conversation_instance.messages.select_related('sender').all().order_by('sent_at')
 
-    def _get_updated_or_new_messages(self, conversation, after_param):
-        messages_queryset = conversation.messages.select_related('sender').all()
+    def _get_updated_or_new_messages(self, conversation_instance, after_param):
+        messages_queryset = conversation_instance.messages.select_related('sender').all()
         if not after_param:
             return messages_queryset
         after_datetime = parse_datetime(after_param)
@@ -273,6 +315,7 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
                 'sender_id': message.sender_id,
                 'content': message.content,
                 'sent_at': message.sent_at.isoformat(),
+                'updated_at': message.updated_at.isoformat() if message.updated_at else None,
                 'updated_at': message.updated_at.isoformat() if message.updated_at else None,
                 'read': message.read
             }
@@ -299,22 +342,22 @@ class AdConversationListView(LoginRequiredMixin, ListView):
 @method_decorator(require_http_methods(["POST"]), name='dispatch')
 class UpdateMessageView(LoginRequiredMixin, View):
     def post(self, request, message_id, *args, **kwargs):
-        message = self._get_message_or_forbidden(message_id, request.user)
-        if isinstance(message, JsonResponse):
-            return message
+        message_instance = self._get_message_or_forbidden(message_id, request.user)
+        if isinstance(message_instance, JsonResponse):
+            return message_instance
 
         new_content = self._get_validated_content(request)
         if isinstance(new_content, JsonResponse):
             return new_content
 
-        self._update_message_content(message, new_content)
-        return self._build_success_response(message)
+        self._update_message_content(message_instance, new_content)
+        return self._build_success_response(message_instance)
 
     def _get_message_or_forbidden(self, message_id, current_user):
-        message = get_object_or_404(Message, pk=message_id)
-        if message.sender != current_user:
+        message_instance = get_object_or_404(Message, pk=message_id)
+        if message_instance.sender != current_user:
             return JsonResponse({'error': 'forbidden'}, status=403)
-        return message
+        return message_instance
 
     def _get_validated_content(self, request):
         content = request.POST.get('content', '').strip()
@@ -322,36 +365,36 @@ class UpdateMessageView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Content cannot be empty.'}, status=400)
         return content
 
-    def _update_message_content(self, message, new_content):
-        message.content = new_content
-        message.save()
+    def _update_message_content(self, message_instance, new_content):
+        message_instance.content = new_content
+        message_instance.save()
 
-    def _build_success_response(self, message):
+    def _build_success_response(self, message_instance):
         return JsonResponse({
-            'id': message.pk,
-            'content': message.content,
-            'sent_at': message.sent_at.isoformat(),
-            'updated_at': message.updated_at.isoformat(),
+            'id': message_instance.pk,
+            'content': message_instance.content,
+            'sent_at': message_instance.sent_at.isoformat(),
+            'updated_at': message_instance.updated_at.isoformat(),
         })
 
 @method_decorator(require_http_methods(["POST"]), name='dispatch')
 class DeleteMessageView(LoginRequiredMixin, View):
     def post(self, request, message_id, *args, **kwargs):
-        message = self._get_message_or_forbidden(message_id, request.user)
-        if isinstance(message, JsonResponse):
-            return message
+        message_instance = self._get_message_or_forbidden(message_id, request.user)
+        if isinstance(message_instance, JsonResponse):
+            return message_instance
 
-        self._delete_message(message)
+        self._delete_message(message_instance)
         return self._build_success_response(message_id)
 
     def _get_message_or_forbidden(self, message_id, current_user):
-        message = get_object_or_404(Message, pk=message_id)
-        if message.sender != current_user:
+        message_instance = get_object_or_404(Message, pk=message_id)
+        if message_instance.sender != current_user:
             return JsonResponse({'error': 'forbidden'}, status=403)
-        return message
+        return message_instance
 
-    def _delete_message(self, message):
-        message.delete()
+    def _delete_message(self, message_instance):
+        message_instance.delete()
 
     def _build_success_response(self, message_id):
         return JsonResponse({'success': True, 'id': message_id})
@@ -359,32 +402,19 @@ class DeleteMessageView(LoginRequiredMixin, View):
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "dashboard.html"
 
-    def get_user(self):
-        return self.request.user
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.get_user()
-        conversations = self._get_user_conversations(user)
+        user = self.request.user
 
+        conversations = (Conversation.objects.filter(owner=user) | Conversation.objects.filter(buyer=user)) \
+            .select_related('ad', 'owner', 'buyer') \
+            .prefetch_related('messages')
+
+        # Add "other_username" and "has_unread" attributes for the template
         for conv in conversations:
-            conv.has_unread = conv.has_unread_messages_for(user)
+            conv.other_username = conv.other_user(user).username
+            conv.has_unread = conv.has_unread_for(user)
 
         context["user_obj"] = user
         context["conversations"] = conversations
         return context
-
-    def _get_user_conversations(self, user):
-        return (
-            Conversation.objects.filter(
-                Q(owner=user) | Q(buyer=user)
-            )
-            .select_related("ad", "owner", "buyer")
-            .annotate(
-                other_username=Case(
-                    When(owner=user, then=F("buyer__username")),
-                    default=F("owner__username")
-                )
-            )
-            .order_by("-created_at")
-        )
