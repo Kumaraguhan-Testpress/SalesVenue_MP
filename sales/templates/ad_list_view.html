@@ -3,8 +3,8 @@
 
     <form method="get" action="{% url 'ad_list' %}" class="search-form">
         <input type="text" 
-            name="q" 
-            value="{{ request.GET.q }}" 
+            name="keyword_to_search" 
+            value="{{ request.GET.keyword_to_search }}" 
             placeholder="Search ads by title or description..." 
             class="search-input">
 
