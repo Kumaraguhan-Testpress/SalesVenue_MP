@@ -27,8 +27,9 @@ class AdListView(FilterView):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return render(request, 'welcome.html')
+            
         return super().dispatch(request, *args, **kwargs)
-
+    
     def get_queryset(self):
         ads_queryset = super().get_queryset().filter(is_active=True) \
                        .select_related('user', 'category') \
@@ -39,40 +40,6 @@ class AdListView(FilterView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['categories'] = Category.objects.all()
-        context['current_filters'] = self.request.GET.urlencode()
-        return context
-
-        # Get filter params
-        category_id = self.request.GET.get('category')
-        location = self.request.GET.get('location')
-        min_price = self.request.GET.get('min_price')
-        max_price = self.request.GET.get('max_price')
-        event_date_str = self.request.GET.get('event_date')
-
-        # Apply filters
-        if category_id:
-            qs = qs.filter(category_id=category_id)
-
-        if location:
-            qs = qs.filter(location__icontains=location)
-
-        if min_price:
-            qs = qs.filter(price__gte=min_price)
-
-        if max_price:
-            qs = qs.filter(price__lte=max_price)
-
-        if event_date_str:
-            event_date = parse_date(event_date_str)
-            if event_date:
-                qs = qs.filter(event_date=event_date)
-
-        return qs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['categories'] = Category.objects.all()
-        # Preserve filters in pagination links
         context['current_filters'] = self.request.GET.urlencode()
         return context
 
@@ -226,6 +193,7 @@ class ConversationDetailView(LoginRequiredMixin, DetailView):
         context['form'] = MessageForm()
         context["other_user"] = conversation.other_user(self.request.user)
         return context
+
 
 class SendMessageView(LoginRequiredMixin, View):
     def post(self, request, conversation_id, *args, **kwargs):
