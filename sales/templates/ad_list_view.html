@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 
     <form method="get" action="{% url 'ad_list' %}" class="search-form">
@@ -58,17 +59,27 @@
 
     <h1 class="page-title">Ads For You</h1>
 
-    <div>
-        <a href="{% url 'ad_create' %}" class="btn btn-primary">+ Create New Ad</a> <br> <br>
-    </div>
+<div class="mb-4">
+    <a href="{% url 'ad_create' %}" class="btn btn-primary">+ Create New Ad</a>
+</div>
 
+<div class="ad-grid">
     {% for ad in ads %}
         <div class="ad-card">
             <div class="ad-card-body">
-                <h2 class="ad-title"><a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a></h2>
+                <div class="ad-image-wrapper">
+                    {% if ad.images.first %}
+                        <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" class="ad-image">
+                    {% else %}
+                        <img src="{% static 'images/noimage.jpg' %}" alt="No image" class="ad-image">
+                    {% endif %}
+                </div>
+                <h2 class="ad-title">
+                    <a href="{{ ad.get_absolute_url }}">{{ ad.title }}</a>
+                </h2>
                 <div class="ad-details">
                     <p><strong>Category:</strong> {{ ad.category.name }}</p>
-                    <p><strong>Price:</strong>
+                    <p><strong>Price:</strong> 
                         {% if ad.price %}
                             ${{ ad.price }}
                         {% else %}
@@ -78,46 +89,40 @@
                     <p><strong>Location:</strong> {{ ad.location }}</p>
                     <p class="ad-posted-by">Posted by: {{ ad.user.username }} on {{ ad.created_at|date:"F d, Y" }}</p>
                 </div>
-                
-                {% if ad.images.first %}
-                    <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" class="ad-image">
-                {% endif %}
             </div>
         </div>
     {% empty %}
         <p class="no-ads-message">No ads are currently available.</p>
     {% endfor %}
+</div>
 
-    {% if is_paginated %}
-        <nav class="pagination-nav">
-            <ul class="pagination-list">
-                {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.previous_page_number }}">Previous</a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link">Previous</span>
-                    </li>
-                {% endif %}
+{% if is_paginated %}
+<nav class="pagination-nav">
+    <ul class="pagination-list">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
 
-                <li class="page-item disabled">
-                    <span class="page-link">
-                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-                    </span>
-                </li>
+        <li class="page-item disabled">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
 
-                {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.next_page_number }}">Next</a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link">Next</span>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
-    {% endif %}
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
 
 {% endblock %}
