@@ -268,9 +268,9 @@ class SendMessageView(LoginRequiredMixin, View):
 
 class ConversationMessagesJSONView(LoginRequiredMixin, View):
     def get(self, request, conversation_id, *args, **kwargs):
-        conversation_instance = self._get_conversation_or_forbidden(conversation_id, request.user)
-        if isinstance(conversation_instance, JsonResponse):
-            return conversation_instance
+        conversation = self._get_conversation_or_forbidden(conversation_id, request.user)
+        if isinstance(conversation, JsonResponse):
+            return conversation
 
         after_param = request.GET.get('after')
         all_messages_queryset = self._get_all_messages(conversation)
@@ -288,7 +288,7 @@ class ConversationMessagesJSONView(LoginRequiredMixin, View):
         conversation = get_object_or_404(Conversation, pk=conversation_id)
         if current_user not in (conversation.owner, conversation.buyer):
             return JsonResponse({'error': 'forbidden'}, status=403)
-        return conversation_instance
+        return conversation
 
     def _get_all_messages(self, conversation):
         return conversation.messages.select_related('sender').all().order_by('sent_at')
