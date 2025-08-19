@@ -27,7 +27,7 @@ class AdListView(FilterView):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return render(request, 'welcome.html')
-            
+
         return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
