@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import View, ListView, DetailView, CreateView, UpdateView, DeleteView
-from .models import Ad, Conversation, Message
+from .models import Ad, Conversation, Message, Category
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -9,29 +9,39 @@ from .mixins import AdOwnerRequiredMixin
 from django.http import JsonResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.db.models import Q, Case, When, F
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_datetime, parse_date
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
+from django_filters.views import FilterView
+from .filters import AdFilter
 
-class AdListView(ListView):
+class AdListView(FilterView):
     model = Ad
     template_name = 'ad_list_view.html'
     context_object_name = 'ads'
+    filterset_class = AdFilter
     
     paginate_by = 10
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            # If not authenticated, render a different template with a welcome message
             return render(request, 'welcome.html')
 
         return super().dispatch(request, *args, **kwargs)
     
     def get_queryset(self):
-        return Ad.objects.filter(is_active=True).select_related('user', 'category') \
-                                                .prefetch_related('images') \
-                                                .order_by('-created_at')
+        ads_queryset = super().get_queryset().filter(is_active=True) \
+                       .select_related('user', 'category') \
+                       .prefetch_related('images') \
+                       .order_by('-created_at')
+        return ads_queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        context['current_filters'] = self.request.GET.urlencode()
+        return context
 
 class AdDetailView(LoginRequiredMixin ,DetailView):
     model = Ad
