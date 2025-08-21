@@ -2,60 +2,53 @@
 {% load static %}
 {% block content %}
 
-    <form method="get" action="{% url 'ad_list' %}" class="search-form">
+<form method="get" action="{% url 'ad_list' %}" class="search-filter-form">
+    <div class="form-group full-width">
         <input type="text" 
             name="keyword_to_search" 
             value="{{ request.GET.keyword_to_search }}" 
-            placeholder="Search ads by title or description..." 
-            class="search-input">
+            placeholder="🔍 Search ads by title or description..." 
+            class="form-control search-input">
+    </div>
 
-        <button type="submit" class="btn-search">
-            Search
-        </button>
+    <div class="form-group">
+        <label for="category-select">Category</label>
+        <select name="category" id="category-select" class="form-control">
+            <option value="">All</option>
+            {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                    {{ cat.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
 
-        <a href="{% url 'ad_list' %}" class="btn-cancel">
-            Cancel
-        </a>
-    </form>
+    <div class="form-group">
+        <label>Location</label>
+        <input type="text" name="location" value="{{ request.GET.location }}" class="form-control">
+    </div>
 
-    <form method="get" class="filter-form">
-        <div class="form-group">
-            <label for="category-select">Category:</label>
-            <select name="category" id="category-select">
-                <option value="">All</option>
-                {% for cat in categories %}
-                    <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
-                        {{ cat.name }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+    <div class="form-group">
+        <label>Min Price</label>
+        <input type="number" name="minimum_price" step="0.01" value="{{ request.GET.minimum_price }}" class="form-control">
+    </div>
 
-        <div class="form-group">
-            <label>Location:</label>
-            <input type="text" name="location" value="{{ request.GET.location }}">
-        </div>
+    <div class="form-group">
+        <label>Max Price</label>
+        <input type="number" name="maximum_price" step="0.01" value="{{ request.GET.maximum_price }}" class="form-control">
+    </div>
 
-        <div class="form-group">
-            <label>Min Price:</label>
-            <input type="number" name="minimum_price" step="0.01" value="{{ request.GET.minimum_price }}">
-        </div>
+    <div class="form-group">
+        <label>Event Date</label>
+        <input type="date" name="event_date" value="{{ request.GET.event_date }}" class="form-control">
+    </div>
 
-        <div class="form-group">
-            <label>Max Price:</label>
-            <input type="number" name="maximum_price" step="0.01" value="{{ request.GET.maximum_price }}">
-        </div>
+    <div class="form-actions full-width">
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <a href="{% url 'ad_list' %}" class="btn btn-secondary">Reset</a>
+    </div>
+</form>
 
-        <div class="form-group">
-            <label>Event Date:</label>
-            <input type="date" name="event_date" value="{{ request.GET.event_date }}">
-        </div>
-
-        <div class="form-group">
-            <button type="submit" class="btn btn-primary">Filter</button>
-            <a href="{% url 'ad_list' %}" class="btn btn-secondary">Reset</a>
-        </div>
-    </form>
 
     <h1 class="page-title">Ads For You</h1>
 
