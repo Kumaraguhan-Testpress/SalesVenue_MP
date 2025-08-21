@@ -44,43 +44,76 @@
         <fieldset class="mb-4 p-3 border rounded">
             <legend class="float-none w-auto px-1">Ad Images</legend>
             {{ images_formset.management_form }}
-            {% for image_form in images_formset %}
-                <div class="image-form mb-3 p-3 border rounded">
-                    {% for field in image_form %}
-                        {% if field.name == 'image' %}
-                            <div class="mb-3">
-                                {% if image_form.instance.image %}
-                                    <div class="mb-2">
-                                        <label>Current Image:</label><br>
-                                        <img src="{{ image_form.instance.image.url }}" class="img-thumbnail" alt="Current Image" style="max-height: 100px;">
-                                    </div>
-                                {% endif %}
-                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                                {% render_field field class="form-control" %}
+            <div id="images-formset">
+                {% for image_form in images_formset %}
+                    <div class="image-form mb-3 p-3 border rounded">
+                        {% for field in image_form %}
+                            {% if field.name == 'image' %}
+                                <div class="mb-3">
+                                    {% if image_form.instance.image %}
+                                        <div class="mb-2">
+                                            <label>Current Image:</label><br>
+                                            <img src="{{ image_form.instance.image.url }}" 
+                                                class="img-thumbnail" 
+                                                alt="Current Image" 
+                                                style="max-height: 100px;">
+                                        </div>
+                                    {% endif %}
+                                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                    {% render_field field class="form-control" %}
+                                </div>
+                            {% elif field.name == 'DELETE' %}
+                                <div class="form-check mt-2">
+                                    {% render_field field class="form-check-input" %}
+                                    <label class="form-check-label" for="{{ field.id_for_label }}">
+                                        Delete Image
+                                    </label>
+                                </div>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+                        {% endfor %}
+                        {% if image_form.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in image_form.errors.values %}
+                                    {{ error }}
+                                {% endfor %}
                             </div>
-                        {% elif field.name == 'DELETE' %}
-                            <div class="form-check mt-2">
-                                {% render_field field class="form-check-input" %}
-                                <label class="form-check-label" for="{{ field.id_for_label }}">
-                                    Delete Image
-                                </label>
-                            </div>
-                        {% else %}
-                            {{ field }}
                         {% endif %}
-                    {% endfor %}
-                    {% if image_form.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in image_form.errors.values %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <button type="button" id="add-image" class="btn btn-outline-primary mt-2">
+                Add another
+            </button>
         </fieldset>
 
+        <div id="empty-form" class="d-none">
+            <div class="image-form mb-3 p-3 border rounded">
+                {% for field in images_formset.empty_form %}
+                    {% if field.name == 'image' %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {% render_field field class="form-control" %}
+                        </div>
+                    {% elif field.name == 'DELETE' %}
+                        <div class="form-check mt-2">
+                            {% render_field field class="form-check-input" %}
+                            <label class="form-check-label" for="{{ field.id_for_label }}">
+                                Delete Image
+                            </label>
+                        </div>
+                    {% else %}
+                        {{ field }}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
         <button type="submit" class="btn btn-success">Save</button>
     </form>
 </div>
+
+{% include "conversations/scripts/ad_image_formset.html" %}
+
 {% endblock %}

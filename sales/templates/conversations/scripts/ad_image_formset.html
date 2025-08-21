@@ -1,0 +1,18 @@
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const addButton = document.getElementById("add-image");
+    const formsetDiv = document.getElementById("images-formset");
+    const emptyFormDiv = document.getElementById("empty-form").innerHTML;
+
+    const totalForms = document.querySelector("input[name$='-TOTAL_FORMS']");
+
+    addButton.addEventListener("click", function () {
+        const formCount = parseInt(totalForms.value);
+
+        let newFormHtml = emptyFormDiv.replace(/__prefix__/g, formCount);
+        formsetDiv.insertAdjacentHTML("beforeend", newFormHtml);
+
+        totalForms.value = formCount + 1;
+    });
+});
+</script>
