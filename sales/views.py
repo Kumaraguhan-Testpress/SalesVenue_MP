@@ -148,23 +148,27 @@ class ConversationListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         current_user = self.request.user
-        return self._get_user_conversations(current_user)
+        qs = self._get_user_conversations(current_user)
+
+        # check query param
+        filter_type = self.request.GET.get("filter")
+        if filter_type == "unread":
+            unread_message_exists = Exists(
+                Message.objects.filter(
+                    conversation=OuterRef('pk'),
+                    read=False
+                ).exclude(sender=current_user)
+            )
+            qs = qs.annotate(has_unread=unread_message_exists).filter(has_unread=True)
+
+        return qs
 
     def _get_user_conversations(self, user):
-        unread_message_exists = Exists(
-            Message.objects.filter(
-                conversation=OuterRef('pk'),
-                read=False                # only unread
-            ).exclude(sender=user)         # not sent by self
-        )
-
         return (
             Conversation.objects
             .filter(self._get_user_filter(user))
             .select_related('ad', 'buyer', 'ad__user')
             .annotate(other_username=self._get_other_username_annotation(user))
-            .annotate(has_unread=unread_message_exists)
-            .filter(has_unread=True)       # only keep convs with unread msgs
             .order_by('-created_at')
         )
 

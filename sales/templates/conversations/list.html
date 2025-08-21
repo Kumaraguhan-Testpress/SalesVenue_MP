@@ -1,18 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Your Conversations</h2>
+
+<div class="mb-3">
+    <a href="{% url 'conversation_list' %}" 
+       class="btn {% if not request.GET.filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+       All
+    </a>
+    <a href="{% url 'conversation_list' %}?filter=unread" 
+       class="btn {% if request.GET.filter == 'unread' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+       Unread
+    </a>
+</div>
+
 <ul>
   {% for conv in conversations %}
     <li>
         <a href="{% url 'conversation_detail' conv.pk %}">
             {{ conv.ad.title }} — Other: {{ conv.other_username }} — {{ conv.created_at|date:"M d, Y H:i" }}
-            {% if conv.has_unread %}
-                <span class="text-danger fw-bold">(Have unread)</span>
+            {% if request.GET.filter == 'unread' %}
+                <span class="badge bg-danger ms-2">Unread</span>
             {% endif %}
         </a>
     </li>
-    {% empty %}
-        <li>No conversations yet.</li>
-    {% endfor %}
+  {% empty %}
+        <li>No conversations found.</li>
+  {% endfor %}
 </ul>
+
+
 {% endblock %}
