@@ -8,7 +8,7 @@ from .forms import AdForm, AdImageFormSet, MessageForm
 from .mixins import AdOwnerRequiredMixin
 from django.http import JsonResponse, HttpResponseForbidden
 from django.utils import timezone
-from django.db.models import Q, Case, When, F
+from django.db.models import Q, Case, When, F, Exists, OuterRef
 from django.utils.dateparse import parse_datetime, parse_date
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
@@ -151,11 +151,20 @@ class ConversationListView(LoginRequiredMixin, ListView):
         return self._get_user_conversations(current_user)
 
     def _get_user_conversations(self, user):
+        unread_message_exists = Exists(
+            Message.objects.filter(
+                conversation=OuterRef('pk'),
+                read=False                # only unread
+            ).exclude(sender=user)         # not sent by self
+        )
+
         return (
             Conversation.objects
             .filter(self._get_user_filter(user))
             .select_related('ad', 'buyer', 'ad__user')
             .annotate(other_username=self._get_other_username_annotation(user))
+            .annotate(has_unread=unread_message_exists)
+            .filter(has_unread=True)       # only keep convs with unread msgs
             .order_by('-created_at')
         )
 
