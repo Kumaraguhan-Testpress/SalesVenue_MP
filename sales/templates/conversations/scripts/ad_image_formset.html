@@ -1,7 +1,5 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("Script loaded ✅");
-
     const addButton = document.getElementById("add-image");
     const formsetDiv = document.getElementById("images-formset");
     const emptyFormDiv = document.getElementById("empty-form").innerHTML;
@@ -10,7 +8,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     addButton.addEventListener("click", function () {
         const formCount = parseInt(totalForms.value);
-        console.log("Adding form number", formCount);
 
         let newFormHtml = emptyFormDiv.replace(/__prefix__/g, formCount);
         formsetDiv.insertAdjacentHTML("beforeend", newFormHtml);
