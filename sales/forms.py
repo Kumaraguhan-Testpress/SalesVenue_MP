@@ -13,8 +13,6 @@ class AdForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Only apply default category when creating a new Ad
         if self.instance is None or self.instance.pk is None:
             first_category = Category.objects.first()
             if first_category:
