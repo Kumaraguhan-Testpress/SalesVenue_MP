@@ -11,13 +11,6 @@ class AdForm(forms.ModelForm):
             'category', 'event_date'
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # If no instance is passed (new Ad), set default category
-        if not self.instance.pk and Category.objects.exists():
-            self.fields['category'].initial = Category.objects.first()
-
 class AdImageForm(forms.ModelForm):
     class Meta:
         model = AdImage
