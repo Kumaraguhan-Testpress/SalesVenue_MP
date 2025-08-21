@@ -8,7 +8,7 @@ from .forms import AdForm, AdImageFormSet, MessageForm
 from .mixins import AdOwnerRequiredMixin
 from django.http import JsonResponse, HttpResponseForbidden
 from django.utils import timezone
-from django.db.models import Q, Case, When, F
+from django.db.models import Q, Case, When, F, Exists, OuterRef
 from django.utils.dateparse import parse_datetime, parse_date
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
@@ -148,7 +148,20 @@ class ConversationListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         current_user = self.request.user
-        return self._get_user_conversations(current_user)
+        qs = self._get_user_conversations(current_user)
+
+        # check query param
+        filter_type = self.request.GET.get("filter")
+        if filter_type == "unread":
+            unread_message_exists = Exists(
+                Message.objects.filter(
+                    conversation=OuterRef('pk'),
+                    read=False
+                ).exclude(sender=current_user)
+            )
+            qs = qs.annotate(has_unread=unread_message_exists).filter(has_unread=True)
+
+        return qs
 
     def _get_user_conversations(self, user):
         return (

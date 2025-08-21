@@ -28,9 +28,8 @@
             </div>
         </div>
     </div>
-
-    <div>
-        {% include "conversations/list.html" %}
-    </div>
+    <a href="{% url 'conversation_list' %}" class="btn btn-outline-primary">
+        Conversations Page --->>>
+    </a>
 </div>
 {% endblock %}
