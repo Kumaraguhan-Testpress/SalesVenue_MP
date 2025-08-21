@@ -22,7 +22,7 @@ class AdListView(FilterView):
     context_object_name = 'ads'
     filterset_class = AdFilter
     
-    paginate_by = 10
+    paginate_by = 9
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
