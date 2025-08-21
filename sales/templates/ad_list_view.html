@@ -93,10 +93,10 @@
     <ul class="pagination-list">
         {% if page_obj.has_previous %}
             <li class="page-item">
-                <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.previous_page_number }}">Previous</a>
+                <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.previous_page_number }}">&#8592; Previous</a>
             </li>
         {% else %}
-            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+            <li class="page-item disabled"><span class="page-link">&#8592; Previous</span></li>
         {% endif %}
 
         <li class="page-item disabled">
@@ -107,10 +107,10 @@
 
         {% if page_obj.has_next %}
             <li class="page-item">
-                <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.next_page_number }}">Next</a>
+                <a class="page-link" href="?{{ current_filters }}&page={{ page_obj.next_page_number }}">Next &#8594</a>
             </li>
         {% else %}
-            <li class="page-item disabled"><span class="page-link">Next</span></li>
+            <li class="page-item disabled"><span class="page-link">Next &#8594</span></li>
         {% endif %}
     </ul>
 </nav>
