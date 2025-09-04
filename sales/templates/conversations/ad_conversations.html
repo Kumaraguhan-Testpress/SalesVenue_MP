@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load tz %}
 
 {% block content %}
 <div class="container mt-4">
@@ -12,7 +13,7 @@
                         <h5 class="mb-1">{{ convo.buyer.username }}</h5>
                         <small class="text-muted">
                             {% if convo.messages.last %}
-                                {{ convo.messages.last.sent_at|date:"M d, Y H:i" }}
+                                {{ convo.messages.last.sent_at|localtime|date:"M d, Y H:i" }}
                             {% endif %}
                         </small>
                     </div>
