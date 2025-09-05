@@ -14,6 +14,7 @@ class CustomUser(AbstractUser):
     contact_info_visibility = models.BooleanField(default=False, help_text="Whether the user's contact information is visible")
     phone_number = models.CharField(max_length=15, blank=True, null=True, help_text="The user's contact phone number.")
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True, help_text="A profile picture for the user.")
+    timezone = models.CharField(max_length=50, default="UTC")
 
     def __str__(self):
         return self.username

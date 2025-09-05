@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load tz %} 
 {% load static %}
 {% block content %}
 
@@ -50,6 +51,9 @@
 </form>
 
     <h1 class="page-title">Ads For You</h1>
+    <p>UTC now: {{ now }}</p>
+<p>Localized now: {{ now|localtime }}</p>
+<p>User timezone: {{ user.timezone }}</p>
 
 <div class="mb-4">
     <a href="{% url 'ad_create' %}" class="btn btn-primary">+ Create New Ad</a>

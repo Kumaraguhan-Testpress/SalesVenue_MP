@@ -4,7 +4,7 @@ from .models import Ad, Conversation, Message, Category
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .forms import AdForm, AdImageFormSet, MessageForm
+from .forms import AdForm, AdImageFormSet, MessageForm, TimezoneForm
 from .mixins import AdOwnerRequiredMixin
 from django.http import JsonResponse, HttpResponseForbidden
 from django.utils import timezone
@@ -15,6 +15,7 @@ from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 from django_filters.views import FilterView
 from .filters import AdFilter
+from django.contrib.auth.decorators import login_required
 
 class AdListView(FilterView):
     model = Ad
@@ -411,3 +412,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             )
             .order_by("-created_at")
         )
+
+@login_required
+def set_timezone(request):
+    if request.method == "POST":
+        form = TimezoneForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+    # Redirect back to the same page the user was on
+    return redirect(request.META.get("HTTP_REFERER", "home"))

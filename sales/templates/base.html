@@ -1,4 +1,5 @@
 {% load static %}
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,6 +17,16 @@
                 <h1 class="mb-0"><a href="{% url 'ad_list' %}" class="site-title">SalesVenue</a></h1>
                 <div class="d-flex align-items-center">
                     {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'set_timezone' %}" class="d-flex align-items-center me-3">
+                        {% csrf_token %}
+                        <select name="timezone" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                            {% for value, label in timezone_form.fields.timezone.choices %}
+                                <option value="{{ value }}" {% if timezone_form.instance.timezone == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
                         <span class="welcome-text">Welcome, {{ user.username }}</span>
                         <a href="{% url 'dashboard' %}" class="btn btn-outline-light ms-3">
                             Dashboard
