@@ -1,6 +1,8 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import Ad, AdImage, Message, Category
+from .models import Ad, AdImage, Message, Category, CustomUser
+from django.utils import timezone
+import pytz
 
 class AdForm(forms.ModelForm):
     class Meta:
@@ -35,3 +37,13 @@ class MessageForm(forms.ModelForm):
     class Meta:
         model = Message
         fields = ['content']
+
+class TimezoneForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ["timezone"]
+
+    timezone = forms.ChoiceField(
+        choices=[(tz, tz) for tz in pytz.common_timezones],
+        widget=forms.Select
+    )
